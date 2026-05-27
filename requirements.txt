@@ -1,8 +1,7 @@
-# JS/TS stack reference for this project
-# Note: This project installs dependencies via package.json (bun/npm), not pip.
+# Python dependencies for the fraud model training pipeline.
+# JavaScript dependencies are managed in package.json/bun.lock.
 
-convex>=1.32.0
-@convex-dev/react-query>=0.1.0
-@tanstack/react-router
-@tanstack/react-start
-@tanstack/react-router-ssr-query
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+joblib>=1.4

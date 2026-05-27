@@ -13,7 +13,6 @@ import {
 	FileText,
 	Gauge,
 	LayoutDashboard,
-	RefreshCcw,
 	Search,
 	Send,
 	ShieldCheck,
@@ -59,6 +58,13 @@ const quickQuestions = [
 	"documentos faltantes",
 	"resumen ejecutivo",
 ];
+
+function riskLevelText(level: string) {
+	if (level === "red") return "Alto";
+	if (level === "yellow") return "Medio";
+	if (level === "green") return "Bajo";
+	return level;
+}
 
 function escapeCsv(value: unknown) {
 	const text = String(value ?? "");
@@ -263,15 +269,6 @@ function Home() {
 								</button>
 								<button
 									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100"
-									disabled={isSeeding}
-									onClick={() => onSeedData(true)}
-									type="button"
-								>
-									<RefreshCcw aria-hidden size={16} />
-									Regenerar demo
-								</button>
-								<button
-									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100"
 									disabled={currentClaims.length === 0}
 									onClick={() => downloadCasesCsv(currentClaims)}
 									type="button"
@@ -335,17 +332,17 @@ function Home() {
 								<div className="grid gap-4 md:grid-cols-3">
 									<RiskCard
 										color="red"
-										label="Rojo"
+										label="Rojo Alto"
 										value={summary?.byLevel?.red ?? 0}
 									/>
 									<RiskCard
 										color="yellow"
-										label="Amarillo"
+										label="Amarillo Medio"
 										value={summary?.byLevel?.yellow ?? 0}
 									/>
 									<RiskCard
 										color="green"
-										label="Verde"
+										label="Verde Bajo"
 										value={summary?.byLevel?.green ?? 0}
 									/>
 								</div>
@@ -546,9 +543,9 @@ function Home() {
 										value={riskFilter}
 									>
 										<option value="all">Todos los riesgos</option>
-										<option value="green">Verde</option>
-										<option value="yellow">Amarillo</option>
-										<option value="red">Rojo</option>
+										<option value="green">Verde Bajo</option>
+										<option value="yellow">Amarillo Medio</option>
+										<option value="red">Rojo Alto</option>
 									</select>
 								</div>
 								<div className="overflow-x-auto">
@@ -591,7 +588,7 @@ function Home() {
 														<span
 															className={`rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[claim.riskLevel]}`}
 														>
-															{claim.riskLevel}
+															{riskLevelText(claim.riskLevel)}
 														</span>
 													</td>
 													<td className="max-w-sm px-4 py-3 text-xs text-slate-700">
@@ -678,7 +675,7 @@ function Home() {
 																{claim.claimNumber}
 															</p>
 															<p className="text-xs text-slate-600">
-																Score {claim.riskScore} - {claim.riskLevel}
+																Score {claim.riskScore} - {riskLevelText(claim.riskLevel)}
 															</p>
 														</li>
 													))}
@@ -849,9 +846,7 @@ function RiskCard({
 
 	return (
 		<article className={`rounded-lg border p-4 ${styles[color]}`}>
-			<p className="text-xs font-semibold uppercase tracking-wide">
-				Riesgo {label}
-			</p>
+			<p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
 			<p className="mt-3 text-3xl font-bold">{value.toLocaleString("en-US")}</p>
 		</article>
 	);

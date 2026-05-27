@@ -1,14 +1,12 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
 import {
 	AlertTriangle,
 	BarChart3,
 	Bot,
 	Brain,
 	ClipboardList,
-	Database,
 	Download,
-	FileText,
 	Gauge,
 	LayoutDashboard,
 	Moon,
@@ -18,10 +16,9 @@ import {
 	Sun,
 	Upload,
 } from "lucide-react";
-import { type ComponentType, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, useEffect, useMemo, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
-import { type PayloadFormat, parsePayload } from "../lib/importPayload";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -46,7 +43,6 @@ const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
 	{ href: "#resumen", label: "Resumen", icon: LayoutDashboard },
 	{ href: "#modelo", label: "Modelo IA", icon: Brain },
 	{ href: "/importacion_csv", label: "Importacion", icon: Upload },
-	{ href: "#importar", label: "Datos", icon: Database },
 	{ href: "#casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
 ];
@@ -58,12 +54,6 @@ const quickQuestions = [
 	"documentos faltantes",
 	"resumen ejecutivo",
 ];
-
-const CSV_TEMPLATE_FILENAME = "plantilla_siniestros_publicos.csv";
-const CSV_TEMPLATE_CONTENT = `claim_id,policy_id,customer_id,claim_amount,estimated_damage_amount,claim_type,incidents_last_12_months,days_since_policy_start,region,report_channel,incident_date,description
-PUB-001,P-7782,CUST-9001,11250,6500,theft,2,45,Quito,callcenter,2026-04-29T23:14:00Z,Vehiculo sustraido en zona urbana.
-PUB-002,P-7783,CUST-9012,2400,2600,collision,0,390,Guayaquil,app,2026-04-10T16:00:00Z,Colision leve con danos de pintura.
-`;
 
 function riskLevelText(level: string) {
 	if (level === "red") return "Alto";
@@ -124,22 +114,7 @@ function Home() {
 	const [search, setSearch] = useState("");
 	const [nlQuestion, setNlQuestion] = useState("");
 	const [submittedQuestion, setSubmittedQuestion] = useState("");
-	const [isSeeding, setIsSeeding] = useState(false);
-	const [payloadFormat, setPayloadFormat] = useState<PayloadFormat>("json");
-	const [publicPayload, setPublicPayload] = useState("");
-	const [datasetName, setDatasetName] = useState("public-claims");
-	const [selectedCsvFileName, setSelectedCsvFileName] = useState<string | null>(
-		null,
-	);
-	const [importFeedback, setImportFeedback] = useState<{
-		inserted: number;
-		skipped: number;
-		errors: string[];
-	} | null>(null);
-	const [importError, setImportError] = useState<string | null>(null);
-	const [isImporting, setIsImporting] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(false);
-	const csvFileInputRef = useRef<HTMLInputElement | null>(null);
 
 	useEffect(() => {
 		const storedTheme = window.localStorage.getItem("theme");
@@ -163,8 +138,6 @@ function Home() {
 		api.claims.askAnalystAssistant,
 		submittedQuestion.trim() ? { question: submittedQuestion } : "skip",
 	);
-	const seedData = useMutation(api.claims.seedSyntheticData);
-	const importPublicClaims = useMutation(api.claims.importPublicClaims);
 	const currentClaims = claims ?? [];
 
 	const riskPillStyles = useMemo(
@@ -179,15 +152,6 @@ function Home() {
 		[],
 	);
 
-	const onSeedData = async (force = false) => {
-		try {
-			setIsSeeding(true);
-			await seedData({ force });
-		} finally {
-			setIsSeeding(false);
-		}
-	};
-
 	const onAsk = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setSubmittedQuestion(nlQuestion.trim());
@@ -198,75 +162,6 @@ function Home() {
 		setSubmittedQuestion(question);
 	};
 
-	const onImportPublic = async () => {
-		try {
-			setImportError(null);
-			setImportFeedback(null);
-			setIsImporting(true);
-			const rows = parsePayload(payloadFormat, publicPayload);
-			if (rows.length === 0) {
-				setImportError("No se detectaron filas para importar");
-				return;
-			}
-			const result = await importPublicClaims({
-				datasetName: datasetName.trim() || undefined,
-				rows,
-			});
-			setImportFeedback({
-				inserted: result.inserted,
-				skipped: result.skipped,
-				errors: result.errors,
-			});
-		} catch (error) {
-			setImportError(
-				error instanceof Error
-					? error.message
-					: "No fue posible importar los datos",
-			);
-		} finally {
-			setIsImporting(false);
-		}
-	};
-
-	const onPickCsvFile = () => {
-		csvFileInputRef.current?.click();
-	};
-
-	const onCsvFileSelected = async (
-		event: React.ChangeEvent<HTMLInputElement>,
-	) => {
-		const file = event.target.files?.[0];
-		if (!file) return;
-		try {
-			setImportError(null);
-			const content = await file.text();
-			setPayloadFormat("csv");
-			setPublicPayload(content);
-			setSelectedCsvFileName(file.name);
-			if (!datasetName.trim() || datasetName === "public-claims") {
-				setDatasetName(file.name.replace(/\.[^/.]+$/, ""));
-			}
-		} catch {
-			setImportError("No se pudo leer el archivo CSV seleccionado");
-		} finally {
-			event.target.value = "";
-		}
-	};
-
-	const onDownloadCsvTemplate = () => {
-		const blob = new Blob([CSV_TEMPLATE_CONTENT], {
-			type: "text/csv;charset=utf-8;",
-		});
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = CSV_TEMPLATE_FILENAME;
-		document.body.append(link);
-		link.click();
-		link.remove();
-		URL.revokeObjectURL(url);
-	};
-
 	const toggleTheme = () => {
 		setIsDarkMode((prev) => {
 			const next = !prev;
@@ -274,45 +169,6 @@ function Home() {
 			window.localStorage.setItem("theme", next ? "dark" : "light");
 			return next;
 		});
-	};
-
-	const loadExamplePayload = () => {
-		setPayloadFormat("json");
-		setPublicPayload(`[
-  {
-    "claim_id": "PUB-001",
-    "policy_id": "P-7782",
-    "customer_id": "CUST-9001",
-    "provider_id": "PROV-EXT-01",
-    "claim_amount": 11250,
-    "estimated_damage_amount": 6500,
-    "claim_type": "theft",
-    "incidents_last_18_months": 3,
-    "days_since_policy_start": 12,
-    "dias_entre_ocurrencia_reporte": 6,
-    "region": "Quito",
-    "report_channel": "callcenter",
-    "incident_date": "2026-04-29T23:14:00Z",
-    "documentos_inconsistentes": true,
-    "provider_observed_cases": 5,
-    "fraud_probability": 0.82,
-    "description": "Vehiculo sustraido en zona urbana con denuncia tardia."
-  },
-  {
-    "claim_id": "PUB-002",
-    "policy_id": "P-7783",
-    "customer_id": "CUST-9012",
-    "claim_amount": 2400,
-    "estimated_damage_amount": 2600,
-    "claim_type": "collision",
-    "incidents_last_12_months": 0,
-    "days_since_policy_start": 390,
-    "region": "Guayaquil",
-    "report_channel": "app",
-    "incident_date": "2026-04-10T16:00:00Z",
-    "description": "Colision leve con danos de pintura."
-  }
-]`);
 	};
 
 	return (
@@ -332,22 +188,6 @@ function Home() {
 								</h1>
 							</div>
 							<div className="flex flex-wrap items-center gap-2">
-								<Link
-									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-									to="/importacion_csv"
-								>
-									<Upload aria-hidden size={16} />
-									Importacion
-								</Link>
-								<button
-									className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-									disabled={isSeeding}
-									onClick={() => onSeedData(false)}
-									type="button"
-								>
-									<Database aria-hidden size={16} />
-									{isSeeding ? "Cargando..." : "Cargar datos de prueba"}
-								</button>
 								<button
 									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 									disabled={currentClaims.length === 0}
@@ -529,111 +369,6 @@ function Home() {
 										/>
 									</div>
 								</div>
-							</div>
-						</section>
-
-						<section className="space-y-4" id="importar">
-							<SectionHeader
-								icon={Upload}
-								kicker="Ingestion"
-								title="Carga datos publicos o registros puntuados"
-								description="Acepta JSON o CSV con columnas del reto. Si incluye fraud_probability, el dashboard usa esa probabilidad como score ML."
-							/>
-							<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-								<div className="grid gap-3 md:grid-cols-[220px_1fr_150px_auto]">
-									<input
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-										onChange={(event) => setDatasetName(event.target.value)}
-										placeholder="Nombre dataset"
-										type="text"
-										value={datasetName}
-									/>
-									<select
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-										onChange={(event) =>
-											setPayloadFormat(event.target.value as PayloadFormat)
-										}
-										value={payloadFormat}
-									>
-										<option value="json">Formato JSON</option>
-										<option value="csv">Formato CSV</option>
-									</select>
-									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-										disabled={isImporting}
-										onClick={onImportPublic}
-										type="button"
-									>
-										<Upload aria-hidden size={16} />
-										{isImporting ? "Importando..." : "Importar"}
-									</button>
-									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
-										onClick={loadExamplePayload}
-										type="button"
-									>
-										<FileText aria-hidden size={16} />
-										Ejemplo
-									</button>
-								</div>
-								<div className="mt-3 flex flex-wrap items-center gap-2">
-									<input
-										accept=".csv,text/csv"
-										className="hidden"
-										onChange={onCsvFileSelected}
-										ref={csvFileInputRef}
-										type="file"
-									/>
-									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
-										onClick={onPickCsvFile}
-										type="button"
-									>
-										<Upload aria-hidden size={16} />
-										Subir CSV desde computador
-									</button>
-									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
-										onClick={onDownloadCsvTemplate}
-										type="button"
-									>
-										<Download aria-hidden size={16} />
-										Descargar plantilla CSV
-									</button>
-									{selectedCsvFileName ? (
-										<span className="text-xs text-slate-600 dark:text-slate-300">
-											Archivo cargado: {selectedCsvFileName}
-										</span>
-									) : null}
-								</div>
-
-								<textarea
-									className="mt-3 min-h-44 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs outline-none focus:border-slate-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:focus:bg-slate-900"
-									onChange={(event) => setPublicPayload(event.target.value)}
-									placeholder={
-										payloadFormat === "json"
-											? '[{"claim_amount": 1200, "claim_type": "collision"}]'
-											: "claim_amount,claim_type,customer_id\n1200,collision,CUST-1"
-									}
-									value={publicPayload}
-								/>
-
-								{importError ? (
-									<p className="mt-2 text-sm text-rose-700">{importError}</p>
-								) : null}
-								{importFeedback ? (
-									<div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100">
-										<p>
-											Importacion completada: {importFeedback.inserted}{" "}
-											insertados / {importFeedback.skipped} omitidos.
-										</p>
-										{importFeedback.errors.length > 0 ? (
-											<p className="mt-1 text-xs">
-												Advertencias: {importFeedback.errors.join(" | ")}
-											</p>
-										) : null}
-									</div>
-								) : null}
 							</div>
 						</section>
 

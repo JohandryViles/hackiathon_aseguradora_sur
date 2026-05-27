@@ -13,7 +13,7 @@ import {
 import { type ChangeEvent, type ComponentType, useRef, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
-import { parseCsvRows } from "../lib/importPayload";
+import { parseCsvRows, parsePayload } from "../lib/importPayload";
 
 export const Route = createFileRoute("/importacion_csv")({
 	component: ImportacionCsv,
@@ -106,12 +106,29 @@ function ImportacionCsv() {
 	const importInsureds = useMutation(api.claims.importInsureds);
 	const importProviders = useMutation(api.claims.importProviders);
 	const importDocuments = useMutation(api.claims.importClaimDocuments);
+	const [jsonImportKey, setJsonImportKey] = useState<ImportKey>("claims");
+	const [jsonPayload, setJsonPayload] = useState("");
+	const [jsonState, setJsonState] = useState<ImportState>({ loading: false });
 
 	const updateState = (key: ImportKey, state: Partial<ImportState>) => {
 		setStates((current) => ({
 			...current,
 			[key]: { ...current[key], ...state },
 		}));
+	};
+
+	const importRows = (
+		key: ImportKey,
+		rows: Array<Record<string, unknown>>,
+		datasetName?: string,
+	) => {
+		if (key === "claims") {
+			return importClaims({ datasetName, rows });
+		}
+		if (key === "policies") return importPolicies({ rows });
+		if (key === "insureds") return importInsureds({ rows });
+		if (key === "providers") return importProviders({ rows });
+		return importDocuments({ rows });
 	};
 
 	const onImportFile = async (key: ImportKey, file: File) => {
@@ -133,19 +150,11 @@ function ImportacionCsv() {
 				return;
 			}
 
-			const result =
-				key === "claims"
-					? await importClaims({
-							datasetName: file.name.replace(/\.[^/.]+$/, ""),
-							rows,
-						})
-					: key === "policies"
-						? await importPolicies({ rows })
-						: key === "insureds"
-							? await importInsureds({ rows })
-							: key === "providers"
-								? await importProviders({ rows })
-								: await importDocuments({ rows });
+			const result = await importRows(
+				key,
+				rows,
+				file.name.replace(/\.[^/.]+$/, ""),
+			);
 
 			updateState(key, {
 				loading: false,
@@ -164,6 +173,40 @@ function ImportacionCsv() {
 					error instanceof Error
 						? error.message
 						: "No fue posible importar el archivo.",
+			});
+		}
+	};
+
+	const onImportJson = async () => {
+		setJsonState({ loading: true, error: undefined, feedback: undefined });
+		try {
+			const rows = parsePayload("json", jsonPayload);
+			if (rows.length === 0) {
+				setJsonState({
+					loading: false,
+					error: "El JSON no contiene registros para importar.",
+				});
+				return;
+			}
+
+			const result = await importRows(jsonImportKey, rows, "json-import");
+			setJsonState({
+				loading: false,
+				feedback: {
+					inserted: result.inserted,
+					skipped: result.skipped,
+					totalReceived: result.totalReceived,
+					errors: result.errors,
+					message: result.message,
+				},
+			});
+		} catch (error) {
+			setJsonState({
+				loading: false,
+				error:
+					error instanceof Error
+						? error.message
+						: "No fue posible importar el JSON.",
 			});
 		}
 	};
@@ -203,6 +246,75 @@ function ImportacionCsv() {
 						/>
 					))}
 				</div>
+
+				<section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+					<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+						<div>
+							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+								<FileText aria-hidden size={15} />
+								Importar JSON
+							</div>
+							<h2 className="mt-1 text-lg font-bold">Importar JSON</h2>
+							<p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+								Pega un arreglo JSON y selecciona la tabla destino para guardarlo
+								en Convex con las mismas validaciones.
+							</p>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							<select
+								className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+								onChange={(event) =>
+									setJsonImportKey(event.target.value as ImportKey)
+								}
+								value={jsonImportKey}
+							>
+								{importConfigs.map((config) => (
+									<option key={config.key} value={config.key}>
+										{config.title}
+									</option>
+								))}
+							</select>
+							<button
+								className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950"
+								disabled={jsonState.loading}
+								onClick={onImportJson}
+								type="button"
+							>
+								<Upload aria-hidden size={16} />
+								{jsonState.loading ? "Importando" : "Importar JSON"}
+							</button>
+						</div>
+					</div>
+
+					<textarea
+						className="mt-4 min-h-44 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs outline-none focus:border-slate-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:focus:bg-slate-900"
+						onChange={(event) => setJsonPayload(event.target.value)}
+						placeholder='[{"claim_id":"PUB-001","policy_id":"POL-1","customer_id":"CUST-1","claim_amount":1200}]'
+						value={jsonPayload}
+					/>
+
+					{jsonState.error ? (
+						<p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-100">
+							{jsonState.error}
+						</p>
+					) : null}
+
+					{jsonState.feedback ? (
+						<div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
+							<p>{jsonState.feedback.message}</p>
+							<p className="mt-1 text-xs">
+								{jsonState.feedback.inserted} insertados /{" "}
+								{jsonState.feedback.skipped} omitidos. Total recibido:{" "}
+								{jsonState.feedback.totalReceived}
+							</p>
+							{jsonState.feedback.errors.length > 0 ? (
+								<p className="mt-1 text-xs">
+									{jsonState.feedback.errors.join(" | ")}
+								</p>
+							) : null}
+						</div>
+					) : null}
+				</section>
 			</div>
 		</div>
 	);

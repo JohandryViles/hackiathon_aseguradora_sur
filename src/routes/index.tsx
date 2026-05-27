@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import {
 	AlertTriangle,
@@ -42,7 +42,6 @@ type ExportableClaim = {
 const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
 	{ href: "#resumen", label: "Resumen", icon: LayoutDashboard },
 	{ href: "#modelo", label: "Modelo IA", icon: Brain },
-	{ href: "/importacion_csv", label: "Importacion", icon: Upload },
 	{ href: "#casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
 ];
@@ -188,6 +187,13 @@ function Home() {
 								</h1>
 							</div>
 							<div className="flex flex-wrap items-center gap-2">
+								<Link
+									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+									to="/importacion_csv"
+								>
+									<Upload aria-hidden size={16} />
+									Importacion
+								</Link>
 								<button
 									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 									disabled={currentClaims.length === 0}

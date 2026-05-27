@@ -1,6 +1,6 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "FraudIA Claims",
+  "name": "Detector IA de Posibles Fraudes en Siniestros",
   "icons": [
     {
       "src": "favicon.ico",

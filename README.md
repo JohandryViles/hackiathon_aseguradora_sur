@@ -1,224 +1,136 @@
-Welcome to your new TanStack Start app! 
+# FraudIA Claims - Reto Aseguradora del Sur
 
-# Getting Started
+Prototipo funcional para detectar posibles fraudes en siniestros usando un
+enfoque hibrido:
 
-To run this application:
+- modelo supervisado con scikit-learn,
+- reglas de negocio explicables,
+- dashboard web para analistas,
+- agente de consultas en lenguaje natural basado en intenciones,
+- datos sinteticos anonimizados para demo.
+
+La solucion genera alertas de revision humana. No acusa fraude, no rechaza
+siniestros y no toma decisiones automaticas de pago.
+
+## Stack
+
+- Frontend: React, TanStack Start, TanStack Router, Tailwind CSS.
+- Backend/demo data: Convex.
+- Modelo IA: Python, pandas, scikit-learn, RandomForestClassifier.
+- Persistencia del modelo: joblib.
+
+## Estructura principal
+
+```text
+convex/                  Funciones, schema y scoring hibrido
+data/synthetic/          Dataset sintetico de entrenamiento
+data/processed/          Dataset puntuado por el modelo
+docs/                    Arquitectura, datos, reglas, IA y limitaciones
+ml/                      Generacion de datos y entrenamiento scikit-learn
+models/                  Modelo joblib y metricas JSON
+presentation/            Guion ejecutivo para pitch
+sql/                     DDL relacional de referencia
+src/                     Aplicacion web
+```
+
+## Instalacion
 
 ```bash
 bun install
+python -m pip install -r requirements.txt
+```
+
+Si se quiere instalar Python dentro del workspace sin tocar el entorno global:
+
+```bash
+python -m pip install --target .python_deps -r requirements.txt
+```
+
+Los scripts Python detectan automaticamente `.python_deps`.
+
+## Entrenar el modelo
+
+```bash
+python ml/generate_synthetic_claims.py --rows 800 --seed 2026
+python ml/train_fraud_model.py
+```
+
+Salidas generadas:
+
+- `data/synthetic/claims_training.csv`
+- `data/processed/claims_scored.csv`
+- `models/fraud_model.joblib`
+- `models/model_metrics.json`
+
+Metricas actuales con dataset sintetico:
+
+- precision: 0.9306
+- recall: 0.9853
+- F1-score: 0.9571
+- ROC-AUC: 0.9980
+
+Estas metricas son de una etiqueta simulada y deben validarse con datos
+historicos reales antes de uso productivo.
+
+## Ejecutar la aplicacion
+
+Configurar variables en `.env` o `.env.local`:
+
+```text
+CONVEX_DEPLOYMENT=
+VITE_CONVEX_URL=
+```
+
+Levantar Convex y la app:
+
+```bash
+bunx --bun convex dev
 bun --bun run dev
 ```
 
-# Building For Production
+La app corre en:
 
-To build this application for production:
+```text
+http://localhost:3000
+```
+
+## Demo sugerida
+
+1. Abrir el dashboard.
+2. Click en `Regenerar demo` para cargar siniestros, polizas, asegurados,
+   vehiculos, proveedores y documentos sinteticos.
+3. Revisar la bandeja de casos priorizados.
+4. Filtrar por riesgo rojo.
+5. Preguntar al agente:
+   - `10 casos de mayor riesgo`
+   - `por que CLM-00001 fue marcado`
+   - `proveedores con mas alertas`
+   - `ciudades con mayor concentracion`
+   - `documentos faltantes en casos criticos`
+6. Exportar el reporte CSV.
+
+## Entregables cubiertos
+
+- Prototipo funcional: dashboard web.
+- Codigo fuente: este repositorio.
+- Dataset: `data/synthetic/claims_training.csv`.
+- Modelo entrenado: `models/fraud_model.joblib`.
+- Metricas: `models/model_metrics.json`.
+- Modelo de datos: `docs/modelo_datos.md`.
+- Arquitectura: `docs/arquitectura.md`.
+- Reglas de negocio: `docs/reglas_negocio.md`.
+- Uso de IA: `docs/uso_ia.md`.
+- Limitaciones y etica: `docs/limitaciones.md`.
+- Pitch: `presentation/pitch_outline.md`.
+- SQL de referencia: `sql/oracle_schema.sql`.
+
+## Scripts utiles
 
 ```bash
+bun --bun run dev
 bun --bun run build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
-
-```bash
 bun --bun run test
-```
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun --bun run lint
-bun --bun run format
 bun --bun run check
+python ml/generate_synthetic_claims.py
+python ml/train_fraud_model.py
 ```
-
-
-## Deploy with Nitro
-
-This project uses Nitro as a generic server adapter, so it can run on any Node-compatible host.
-
-```bash
-npm run build
-node dist/server/index.mjs
-```
-
-The build output is a self-contained Node server. To deploy, push the `dist/` directory to your host (Render, Fly.io, your own VPS, etc.) and run the server command above.
-
-For host-specific presets (Vercel, Netlify, Cloudflare, AWS Lambda, etc.) and tuning, see https://v3.nitro.build/deploy.
-
-
-## Setting up Convex
-
-- Set the `VITE_CONVEX_URL` and `CONVEX_DEPLOYMENT` environment variables in your `.env.local`. (Or run `bunx --bun convex init` to set them automatically.)
-- Run `bunx --bun convex dev` to start the Convex server.
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).

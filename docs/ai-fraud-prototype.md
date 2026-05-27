@@ -16,7 +16,21 @@ Este prototipo implementa un flujo de analitica explicable para apoyar a analist
 - **Carga de datos publicos:** `importPublicClaims` permite importar lotes JSON/CSV (parseados desde la UI) y etiquetarlos por `sourceDataset`.
 - **Atributos incluidos:** monto reclamado, dano estimado, historial del cliente, tiempo desde inicio de poliza, canal, tipo de siniestro, region, antiguedad del vehiculo y narrativa corta.
 
-## Modelo de riesgo (reglas explicables)
+## Modelo de riesgo hibrido
+
+El prototipo ahora incluye un modelo supervisado entrenado con scikit-learn:
+
+- script de generacion: `ml/generate_synthetic_claims.py`,
+- script de entrenamiento: `ml/train_fraud_model.py`,
+- dataset: `data/synthetic/claims_training.csv`,
+- modelo serializado: `models/fraud_model.joblib`,
+- metricas: `models/model_metrics.json`,
+- predicciones: `data/processed/claims_scored.csv`.
+
+El score final combina 55% modelo ML y 45% reglas explicables. Si un registro
+importado no trae score ML, el sistema usa solo reglas.
+
+## Reglas explicables
 
 La evaluacion se hace por reglas con puntaje acumulado y tope [0, 100]:
 
@@ -62,7 +76,7 @@ La ruta principal incluye:
 ## Limitaciones
 
 1. Datos sinteticos, no validados contra historicos reales.
-2. Modelo de reglas, no entrenamiento supervisado ni probabilistico.
+2. La etiqueta de fraude es simulada y debe validarse con historicos reales.
 3. Umbrales estaticos, no calibrados por negocio por linea de producto.
 4. NLP basado en intenciones simples; no entiende preguntas complejas.
 5. No reemplaza decision humana: sirve para priorizacion y apoyo.

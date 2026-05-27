@@ -1,0 +1,111 @@
+{
+  "modelVersion": "sklearn-random-forest-v1",
+  "rows": 800,
+  "trainRows": 600,
+  "testRows": 200,
+  "positiveRate": 0.3412,
+  "accuracy": 0.97,
+  "precision": 0.9306,
+  "recall": 0.9853,
+  "f1": 0.9571,
+  "rocAuc": 0.998,
+  "confusionMatrix": [
+    [
+      127,
+      5
+    ],
+    [
+      1,
+      67
+    ]
+  ],
+  "classificationReport": {
+    "0": {
+      "precision": 0.9921875,
+      "recall": 0.9621212121212122,
+      "f1-score": 0.9769230769230769,
+      "support": 132.0
+    },
+    "1": {
+      "precision": 0.9305555555555556,
+      "recall": 0.9852941176470589,
+      "f1-score": 0.9571428571428572,
+      "support": 68.0
+    },
+    "accuracy": 0.97,
+    "macro avg": {
+      "precision": 0.9613715277777778,
+      "recall": 0.9737076648841355,
+      "f1-score": 0.967032967032967,
+      "support": 200.0
+    },
+    "weighted avg": {
+      "precision": 0.9712326388888889,
+      "recall": 0.97,
+      "f1-score": 0.9701978021978022,
+      "support": 200.0
+    }
+  },
+  "featureImportances": [
+    {
+      "feature": "paid_amount",
+      "importance": 0.2403
+    },
+    {
+      "feature": "narrative_similarity_max",
+      "importance": 0.0816
+    },
+    {
+      "feature": "days_since_policy_start",
+      "importance": 0.0714
+    },
+    {
+      "feature": "provider_observed_cases",
+      "importance": 0.0682
+    },
+    {
+      "feature": "claim_status_Reserva",
+      "importance": 0.0663
+    },
+    {
+      "feature": "incidents_last_18_months",
+      "importance": 0.0561
+    },
+    {
+      "feature": "customer_score_simulated",
+      "importance": 0.0557
+    },
+    {
+      "feature": "customer_tenure_months",
+      "importance": 0.0418
+    },
+    {
+      "feature": "vehicle_year",
+      "importance": 0.029
+    },
+    {
+      "feature": "documents_inconsistent",
+      "importance": 0.0283
+    },
+    {
+      "feature": "vehicle_incidents_last_18_months",
+      "importance": 0.0271
+    },
+    {
+      "feature": "provider_watchlist",
+      "importance": 0.0267
+    },
+    {
+      "feature": "incidents_last_12_months",
+      "importance": 0.0235
+    },
+    {
+      "feature": "days_until_policy_end",
+      "importance": 0.0229
+    },
+    {
+      "feature": "days_between_occurrence_report",
+      "importance": 0.0221
+    }
+  ]
+}

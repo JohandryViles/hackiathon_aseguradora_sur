@@ -770,44 +770,6 @@ function Home() {
 								</div>
 							</div>
 						</section>
-
-						<section className="space-y-4" id="entregables">
-							<SectionHeader
-								icon={FileCheck2}
-								kicker="Entrega"
-								title="Checklist del reto"
-								description="Componentes que ya quedaron plasmados en codigo, datos y documentacion."
-							/>
-							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-								<Deliverable
-									label="Modelo scikit-learn"
-									path="models/fraud_model.joblib"
-								/>
-								<Deliverable
-									label="Metricas del modelo"
-									path="models/model_metrics.json"
-								/>
-								<Deliverable
-									label="Dataset sintetico"
-									path="data/synthetic/claims_training.csv"
-								/>
-								<Deliverable label="Arquitectura" path="docs/arquitectura.md" />
-								<Deliverable
-									label="Modelo de datos"
-									path="docs/modelo_datos.md"
-								/>
-								<Deliverable
-									label="Reglas de negocio"
-									path="docs/reglas_negocio.md"
-								/>
-								<Deliverable label="Uso de IA" path="docs/uso_ia.md" />
-								<Deliverable label="Limitaciones" path="docs/limitaciones.md" />
-								<Deliverable
-									label="Pitch"
-									path="presentation/pitch_outline.md"
-								/>
-							</div>
-						</section>
 					</div>
 				</main>
 			</div>

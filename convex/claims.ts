@@ -1,5 +1,6 @@
-import { mutation, query } from './_generated/server'
+import { action, mutation, query } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
+import { makeFunctionReference } from 'convex/server'
 import { v } from 'convex/values'
 
 type RiskLevel = 'green' | 'yellow' | 'red'
@@ -94,6 +95,23 @@ type AssistantIntent =
   | 'why'
   | 'summary'
   | 'help'
+
+type AnalystAssistantResponse = {
+  intent: AssistantIntent
+  answer: string
+  recommendedAction: string
+  claims: EnrichedClaim[]
+}
+
+const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
+const DEFAULT_ANALYST_SYSTEM_MESSAGE =
+  'Eres un analista antifraude de seguros para Aseguradora del Sur. Responde en espanol, de forma clara y breve. Usa solo los datos entregados en el contexto. No acuses fraude como hecho confirmado; habla de posibles alertas, riesgo y pasos de revision humana. Devuelve recomendaciones accionables para el analista.'
+
+const askAnalystAssistantQuery = makeFunctionReference<'query', { question: string }, AnalystAssistantResponse>(
+  'claims:askAnalystAssistant',
+)
+const getSummaryQuery = makeFunctionReference<'query', Record<string, never>, unknown>('claims:getSummary')
+const listWithRiskQuery = makeFunctionReference<'query', { limit: number }, EnrichedClaim[]>('claims:listWithRisk')
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -1645,6 +1663,157 @@ export const askAnalystAssistant = query({
       answer: 'Puedo responder sobre mayor riesgo, explicaciones por siniestro, proveedores, ciudades, ramos, documentos, montos y resumen ejecutivo.',
       recommendedAction: 'Ejemplos: "10 siniestros con mayor riesgo", "por que CLM-00001", "proveedores con mas alertas".',
       claims: [],
+    }
+  },
+})
+
+function pickAgentClaimFields(claim: EnrichedClaim) {
+  return {
+    claimNumber: claim.claimNumber,
+    customerId: claim.customerId,
+    providerId: claim.providerId ?? null,
+    policyId: claim.policyId,
+    riskLevel: claim.riskLevel,
+    riskScore: claim.riskScore,
+    mlScore: claim.mlScore,
+    ruleRiskScore: claim.ruleRiskScore,
+    claimAmount: claim.claimAmount,
+    estimatedDamageAmount: claim.estimatedDamageAmount,
+    locationRegion: claim.locationRegion,
+    coverage: claim.coverage ?? claim.lineOfBusiness ?? null,
+    claimStatus: claim.claimStatus ?? null,
+    anomalyFlags: claim.anomalyFlags.slice(0, 5),
+    explanation: claim.explanation,
+    recommendedAction: claim.recommendedAction,
+  }
+}
+
+function extractJsonObject(text: string) {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start === -1 || end === -1 || end <= start) return null
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function stringFromUnknown(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function openAITextFromResponse(data: unknown) {
+  const response = asRecord(data)
+  const outputText = response ? stringFromUnknown(response.output_text) : null
+  if (outputText) return outputText
+
+  const choices = response?.choices
+  if (Array.isArray(choices)) {
+    const firstChoice = asRecord(choices[0])
+    const message = asRecord(firstChoice?.message)
+    const content = stringFromUnknown(message?.content)
+    if (content) return content
+  }
+
+  const output = response?.output
+  if (Array.isArray(output)) {
+    const parts: string[] = []
+    for (const item of output) {
+      const content = asRecord(item)?.content
+      if (!Array.isArray(content)) continue
+      for (const part of content) {
+        const text = stringFromUnknown(asRecord(part)?.text)
+        if (text) parts.push(text)
+      }
+    }
+    if (parts.length > 0) return parts.join('\n')
+  }
+
+  return null
+}
+
+export const askAnalystAssistantWithLLM = action({
+  args: { question: v.string() },
+  handler: async (ctx, args) => {
+    const question = args.question.trim()
+    const localResponse = await ctx.runQuery(askAnalystAssistantQuery, { question })
+
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return {
+        ...localResponse,
+        usedLLM: false,
+        model: 'local-rules',
+        answer: `${localResponse.answer}\n\nNota: OPENAI_API_KEY no esta configurada en Convex; esta respuesta usa el agente local basado en reglas.`,
+      }
+    }
+
+    const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
+    const systemMessage = process.env.OPENAI_SYSTEM_MESSAGE || DEFAULT_ANALYST_SYSTEM_MESSAGE
+    const [summary, claims] = await Promise.all([
+      ctx.runQuery(getSummaryQuery, {}),
+      ctx.runQuery(listWithRiskQuery, { limit: 40 }),
+    ])
+    const contextClaims = claims.slice(0, 16).map(pickAgentClaimFields)
+
+    const userMessage = [
+      `Pregunta del analista: ${question || 'Resumen ejecutivo'}`,
+      '',
+      'Respuesta base del sistema local:',
+      JSON.stringify(localResponse),
+      '',
+      'Resumen operativo:',
+      JSON.stringify(summary),
+      '',
+      'Casos disponibles para contexto:',
+      JSON.stringify(contextClaims),
+      '',
+      'Devuelve exclusivamente un JSON con esta forma:',
+      '{"answer":"respuesta para el analista","recommendedAction":"siguiente accion concreta"}',
+    ].join('\n')
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 700,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      const errorMessage =
+        stringFromUnknown(asRecord(asRecord(data)?.error)?.message) ??
+        `OpenAI respondio con estado ${response.status}`
+      return {
+        ...localResponse,
+        usedLLM: false,
+        model,
+        answer: `${localResponse.answer}\n\nNota: no fue posible usar OpenAI (${errorMessage}). Se muestra la respuesta local.`,
+      }
+    }
+
+    const rawText = openAITextFromResponse(data)
+    const parsed = rawText ? extractJsonObject(rawText) : null
+    const answer = stringFromUnknown(parsed?.answer) ?? rawText ?? localResponse.answer
+    const recommendedAction = stringFromUnknown(parsed?.recommendedAction) ?? localResponse.recommendedAction
+
+    return {
+      ...localResponse,
+      answer,
+      recommendedAction,
+      usedLLM: true,
+      model,
     }
   },
 })

@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import {
 	AlertTriangle,
 	BarChart3,
@@ -36,6 +36,14 @@ type ExportableClaim = {
 	riskLevel: string;
 	anomalyFlags: string[];
 	recommendedAction: string;
+};
+
+type AssistantResponse = {
+	answer: string;
+	recommendedAction: string;
+	claims: ExportableClaim[];
+	usedLLM?: boolean;
+	model?: string;
 };
 
 const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
@@ -110,7 +118,10 @@ function downloadCasesCsv(claims: ExportableClaim[]) {
 
 function Home() {
 	const [nlQuestion, setNlQuestion] = useState("");
-	const [submittedQuestion, setSubmittedQuestion] = useState("");
+	const [assistantResponse, setAssistantResponse] =
+		useState<AssistantResponse | null>(null);
+	const [assistantLoading, setAssistantLoading] = useState(false);
+	const [assistantError, setAssistantError] = useState<string | null>(null);
 	const [isDarkMode, setIsDarkMode] = useState(false);
 
 	useEffect(() => {
@@ -127,10 +138,7 @@ function Home() {
 
 	const summary = useQuery(api.claims.getSummary, {});
 	const exportClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
-	const assistantResponse = useQuery(
-		api.claims.askAnalystAssistant,
-		submittedQuestion.trim() ? { question: submittedQuestion } : "skip",
-	);
+	const askAssistant = useAction(api.claims.askAnalystAssistantWithLLM);
 	const currentClaims = exportClaims ?? [];
 	const recentRedClaims = currentClaims
 		.filter((claim) => claim.riskLevel === "red")
@@ -139,14 +147,33 @@ function Home() {
 		.filter((claim) => claim.riskLevel === "yellow")
 		.slice(0, 5);
 
+	const runAssistant = async (question: string) => {
+		const trimmed = question.trim();
+		if (!trimmed) return;
+		setAssistantLoading(true);
+		setAssistantError(null);
+		try {
+			const response = await askAssistant({ question: trimmed });
+			setAssistantResponse(response);
+		} catch (error) {
+			setAssistantError(
+				error instanceof Error
+					? error.message
+					: "No fue posible consultar el agente.",
+			);
+		} finally {
+			setAssistantLoading(false);
+		}
+	};
+
 	const onAsk = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		setSubmittedQuestion(nlQuestion.trim());
+		void runAssistant(nlQuestion);
 	};
 
 	const askQuickQuestion = (question: string) => {
 		setNlQuestion(question);
-		setSubmittedQuestion(question);
+		void runAssistant(question);
 	};
 
 	const toggleTheme = () => {
@@ -385,11 +412,12 @@ function Home() {
 											value={nlQuestion}
 										/>
 										<button
-											className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white"
+											className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-indigo-400"
+											disabled={assistantLoading || !nlQuestion.trim()}
 											type="submit"
 										>
 											<Send aria-hidden size={16} />
-											Consultar
+											{assistantLoading ? "Consultando" : "Consultar"}
 										</button>
 									</form>
 									<div className="mt-4 flex flex-wrap gap-2">
@@ -408,11 +436,28 @@ function Home() {
 
 								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 									<h2 className="font-semibold">Respuesta</h2>
-									{assistantResponse ? (
+									{assistantError ? (
+										<p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-100">
+											{assistantError}
+										</p>
+									) : null}
+									{assistantLoading ? (
+										<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+											Analizando consulta...
+										</p>
+									) : null}
+									{assistantResponse && !assistantLoading ? (
 										<div className="mt-3 space-y-3">
 											<p className="text-sm text-slate-800 dark:text-slate-200">
 												{assistantResponse.answer}
 											</p>
+											{assistantResponse.model ? (
+												<p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+													{assistantResponse.usedLLM
+														? `IA generativa: ${assistantResponse.model}`
+														: "Agente local basado en reglas"}
+												</p>
+											) : null}
 											<div className="rounded-md bg-indigo-50 p-3 text-sm text-indigo-950 dark:bg-indigo-900/40 dark:text-indigo-100">
 												<strong>Siguiente accion:</strong>{" "}
 												{assistantResponse.recommendedAction}
@@ -435,12 +480,12 @@ function Home() {
 												</ul>
 											) : null}
 										</div>
-									) : (
+									) : !assistantLoading && !assistantError ? (
 										<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
 											Selecciona una pregunta rapida o escribe una consulta para
 											obtener casos relacionados.
 										</p>
-									)}
+									) : null}
 								</div>
 							</div>
 						</section>

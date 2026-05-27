@@ -314,7 +314,7 @@ function Home() {
 									type="button"
 								>
 									<Database aria-hidden size={16} />
-									{isSeeding ? "Cargando..." : "Cargar datos"}
+									{isSeeding ? "Cargando..." : "Cargar datos de prueba"}
 								</button>
 								<button
 									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100"

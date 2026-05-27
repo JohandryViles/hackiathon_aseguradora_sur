@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { createFileRoute } from '@tanstack/react-router'
 
@@ -7,6 +7,14 @@ import { api } from '../../convex/_generated/api'
 export const Route = createFileRoute('/')({ component: Home })
 
 type PayloadFormat = 'json' | 'csv'
+type ClaimSortKey = 'claim' | 'cliente' | 'monto' | 'score' | 'nivel' | 'alertas'
+type SortDirection = 'asc' | 'desc'
+type SortRule = { key: ClaimSortKey; direction: SortDirection }
+const CSV_TEMPLATE_FILENAME = 'plantilla_siniestros_publicos.csv'
+const CSV_TEMPLATE_CONTENT = `claim_id,policy_id,customer_id,claim_amount,estimated_damage_amount,claim_type,incidents_last_12_months,days_since_policy_start,region,report_channel,incident_date,report_date,insured_age,vehicle_year,night_claim,description
+PUB-001,P-7782,CUST-9001,11250,6500,theft,2,45,Quito,callcenter,2026-04-29T23:14:00Z,2026-05-01T09:00:00Z,38,2017,true,Vehiculo sustraido en zona urbana.
+PUB-002,P-7783,CUST-9012,2400,2600,collision,0,390,Guayaquil,app,2026-04-10T16:00:00Z,2026-04-10T16:45:00Z,29,2020,false,Colision leve con danos de pintura.
+`
 
 function parseCsvValue(value: string): string | number | boolean {
   const trimmed = value.trim()
@@ -65,6 +73,9 @@ function Home() {
   const [payloadFormat, setPayloadFormat] = useState<PayloadFormat>('json')
   const [publicPayload, setPublicPayload] = useState('')
   const [datasetName, setDatasetName] = useState('public-claims')
+  const [selectedCsvFileName, setSelectedCsvFileName] = useState<string | null>(null)
+  const [seedFeedback, setSeedFeedback] = useState<string | null>(null)
+  const [seedError, setSeedError] = useState<string | null>(null)
   const [importFeedback, setImportFeedback] = useState<{
     inserted: number
     skipped: number
@@ -72,6 +83,10 @@ function Home() {
   } | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [sortRules, setSortRules] = useState<SortRule[]>([
+    { key: 'score', direction: 'desc' },
+  ])
+  const csvFileInputRef = useRef<HTMLInputElement | null>(null)
 
   const summary = useQuery(apiRef.claims.getSummary, {})
   const claims = useQuery(apiRef.claims.listWithRisk, {
@@ -94,11 +109,110 @@ function Home() {
     }),
     [],
   )
+  const riskLevelLabels = useMemo(
+    () => ({
+      green: 'Bajo',
+      yellow: 'Medio',
+      red: 'Alto',
+    }),
+    [],
+  )
+
+  const sortedClaims = useMemo(() => {
+    if (!claims) return []
+
+    const levelRank: Record<'green' | 'yellow' | 'red', number> = {
+      green: 0,
+      yellow: 1,
+      red: 2,
+    }
+    const rows = [...claims]
+
+    const compareByRule = (a: (typeof rows)[number], b: (typeof rows)[number], rule: SortRule) => {
+      const direction = rule.direction === 'asc' ? 1 : -1
+      switch (rule.key) {
+        case 'claim':
+          return direction * a.claimNumber.localeCompare(b.claimNumber)
+        case 'cliente':
+          return direction * a.customerId.localeCompare(b.customerId)
+        case 'monto':
+          return direction * (a.claimAmount - b.claimAmount)
+        case 'score':
+          return direction * (a.riskScore - b.riskScore)
+        case 'nivel':
+          return direction * (levelRank[a.riskLevel] - levelRank[b.riskLevel])
+        case 'alertas':
+          return direction * (a.anomalyFlags.length - b.anomalyFlags.length)
+        default:
+          return 0
+      }
+    }
+
+    rows.sort((a, b) => {
+      for (const rule of sortRules) {
+        const result = compareByRule(a, b, rule)
+        if (result !== 0) return result
+      }
+      return a.claimNumber.localeCompare(b.claimNumber)
+    })
+
+    return rows
+  }, [claims, sortRules])
+
+  const defaultDirection = (key: ClaimSortKey): SortDirection =>
+    key === 'monto' || key === 'score' || key === 'nivel' || key === 'alertas'
+      ? 'desc'
+      : 'asc'
+
+  const onSortTable = (key: ClaimSortKey, additive: boolean) => {
+    setSortRules((current) => {
+      const existingIndex = current.findIndex((rule) => rule.key === key)
+      if (!additive) {
+        if (existingIndex === 0) {
+          return [
+            {
+              key,
+              direction: current[0].direction === 'asc' ? 'desc' : 'asc',
+            },
+          ]
+        }
+        return [{ key, direction: defaultDirection(key) }]
+      }
+
+      if (existingIndex >= 0) {
+        const next = [...current]
+        next[existingIndex] = {
+          key,
+          direction: next[existingIndex].direction === 'asc' ? 'desc' : 'asc',
+        }
+        return next
+      }
+
+      return [...current, { key, direction: defaultDirection(key) }]
+    })
+  }
+
+  const sortIndicator = (key: ClaimSortKey) => {
+    const idx = sortRules.findIndex((rule) => rule.key === key)
+    if (idx === -1) return ' -'
+    return ` ${idx + 1}${sortRules[idx].direction === 'asc' ? '↑' : '↓'}`
+  }
 
   const onSeedData = async () => {
     try {
+      setSeedError(null)
+      setSeedFeedback(null)
       setIsSeeding(true)
-      await seedData({})
+      const result = await seedData({})
+      setSeedFeedback(
+        `Datos sinteticos cargados: ${result.inserted} insertados, ${result.skippedExisting ?? 0} omitidos por duplicado.`,
+      )
+    } catch (error) {
+      setSeedError(
+        error instanceof Error
+          ? error.message
+          : 'No fue posible cargar datos sinteticos',
+      )
     } finally {
       setIsSeeding(false)
     }
@@ -133,6 +247,46 @@ function Home() {
     } finally {
       setIsImporting(false)
     }
+  }
+
+  const onPickCsvFile = () => {
+    csvFileInputRef.current?.click()
+  }
+
+  const onCsvFileSelected = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setImportError(null)
+      const content = await file.text()
+      setPayloadFormat('csv')
+      setPublicPayload(content)
+      setSelectedCsvFileName(file.name)
+      if (!datasetName.trim() || datasetName === 'public-claims') {
+        setDatasetName(file.name.replace(/\.[^/.]+$/, ''))
+      }
+    } catch {
+      setImportError('No se pudo leer el archivo CSV seleccionado')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const onDownloadCsvTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE_CONTENT], {
+      type: 'text/csv;charset=utf-8;',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = CSV_TEMPLATE_FILENAME
+    document.body.append(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   }
 
   const loadExamplePayload = () => {
@@ -207,13 +361,17 @@ function Home() {
             <option value="red">Rojo</option>
           </select>
         </div>
+        {seedError ? <p className="mt-2 text-sm text-red-700">{seedError}</p> : null}
+        {seedFeedback ? (
+          <p className="mt-2 text-sm text-emerald-700">{seedFeedback}</p>
+        ) : null}
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">
         <MetricCard label="Total siniestros" value={summary?.total ?? 0} />
         <MetricCard label="Score promedio" value={summary?.averageRiskScore ?? 0} />
-        <MetricCard label="Riesgo rojo" value={summary?.byLevel.red ?? 0} />
-        <MetricCard label="Riesgo amarillo" value={summary?.byLevel.yellow ?? 0} />
+        <MetricCard label="Nivel alto (rojo)" value={summary?.byLevel.red ?? 0} />
+        <MetricCard label="Nivel medio (amarillo)" value={summary?.byLevel.yellow ?? 0} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -263,6 +421,34 @@ function Home() {
             {isImporting ? 'Importando...' : 'Importar'}
           </button>
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={onCsvFileSelected}
+            ref={csvFileInputRef}
+            type="file"
+          />
+          <button
+            className="rounded-md border border-gray-300 px-3 py-2 text-xs font-medium"
+            onClick={onPickCsvFile}
+            type="button"
+          >
+            Cargar CSV desde archivo
+          </button>
+          <button
+            className="rounded-md border border-gray-300 px-3 py-2 text-xs font-medium"
+            onClick={onDownloadCsvTemplate}
+            type="button"
+          >
+            Descargar plantilla CSV
+          </button>
+          {selectedCsvFileName ? (
+            <span className="text-xs text-gray-600">
+              Archivo cargado: {selectedCsvFileName}
+            </span>
+          ) : null}
+        </div>
 
         <textarea
           className="mt-3 min-h-40 w-full rounded-md border border-gray-300 p-3 font-mono text-xs"
@@ -296,21 +482,48 @@ function Home() {
             <p className="text-xs text-gray-600">
               Cada caso incluye score, nivel y explicacion de alertas.
             </p>
+            <p className="text-xs text-gray-500">
+              Clic ordena por una columna. Shift+clic agrega orden secundario/terciario.
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Claim</th>
-                  <th className="px-4 py-2 font-medium">Cliente</th>
-                  <th className="px-4 py-2 font-medium">Monto</th>
-                  <th className="px-4 py-2 font-medium">Score</th>
-                  <th className="px-4 py-2 font-medium">Nivel</th>
-                  <th className="px-4 py-2 font-medium">Alertas</th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('claim', event.shiftKey)} type="button">
+                      Claim{sortIndicator('claim')}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('cliente', event.shiftKey)} type="button">
+                      Cliente{sortIndicator('cliente')}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('monto', event.shiftKey)} type="button">
+                      Monto{sortIndicator('monto')}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('score', event.shiftKey)} type="button">
+                      Score{sortIndicator('score')}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('nivel', event.shiftKey)} type="button">
+                      Nivel{sortIndicator('nivel')}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 font-medium">
+                    <button onClick={(event) => onSortTable('alertas', event.shiftKey)} type="button">
+                      Alertas{sortIndicator('alertas')}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {(claims ?? []).map((claim) => (
+                {sortedClaims.map((claim) => (
                   <tr className="border-t border-gray-100 align-top" key={claim._id}>
                     <td className="px-4 py-2 font-medium">{claim.claimNumber}</td>
                     <td className="px-4 py-2">{claim.customerId}</td>
@@ -320,7 +533,7 @@ function Home() {
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[claim.riskLevel]}`}
                       >
-                        {claim.riskLevel}
+                        {riskLevelLabels[claim.riskLevel]}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-xs text-gray-700">
@@ -330,7 +543,7 @@ function Home() {
                     </td>
                   </tr>
                 ))}
-                {claims && claims.length === 0 ? (
+                {claims && sortedClaims.length === 0 ? (
                   <tr>
                     <td className="px-4 py-8 text-center text-sm text-gray-600" colSpan={6}>
                       No hay resultados para el filtro actual.

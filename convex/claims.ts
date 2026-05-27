@@ -42,8 +42,8 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function riskLevelFromScore(score: number): RiskLevel {
-  if (score >= 70) return 'red'
-  if (score >= 40) return 'yellow'
+  if (score >= 76) return 'red'
+  if (score >= 41) return 'yellow'
   return 'green'
 }
 
@@ -106,6 +106,35 @@ function buildSyntheticClaim(index: number): ClaimInput {
       ? 'Reclamo con daños altos para vehiculo antiguo y antecedentes recientes.'
       : 'Choque menor reportado por el asegurado con soporte fotografico inicial.',
     source: 'synthetic',
+  }
+}
+
+function buildYellowRiskClaim(index: number): ClaimInput {
+  const now = Date.now()
+  const occurredAt = now - (10 + index) * 24 * 60 * 60 * 1000
+  const submittedAt = occurredAt + 2 * 24 * 60 * 60 * 1000
+  const estimatedDamageAmount = 5400 + index * 180
+  const claimAmount = Math.round(estimatedDamageAmount * 1.4)
+
+  return {
+    claimNumber: `YEL-${String(index + 1).padStart(4, '0')}`,
+    policyId: `POL-YEL-${7000 + index}`,
+    customerId: `CUST-YEL-${6000 + index}`,
+    customerAge: 28 + (index % 21),
+    claimType: index % 3 === 0 ? 'theft' : 'collision',
+    channel: index % 2 === 0 ? 'web' : 'broker',
+    locationRegion: index % 2 === 0 ? 'Quito' : 'Guayaquil',
+    vehicleYear: 2011 + (index % 9),
+    claimAmount,
+    estimatedDamageAmount,
+    incidentsLast12Months: 2,
+    daysSincePolicyStart: 70,
+    occurredAt,
+    submittedAt,
+    isNightClaim: false,
+    reportNarrative: 'Caso de riesgo medio para revision documental en unidad antifraude.',
+    source: 'synthetic',
+    sourceDataset: 'yellow-risk-seed',
   }
 }
 
@@ -391,34 +420,61 @@ function extractCustomerId(question: string) {
 
 export const seedSyntheticData = mutation({
   args: { force: v.optional(v.boolean()) },
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const existing = await ctx.db.query('claims').collect()
-    if (existing.length > 0 && !args.force) {
-      return {
-        inserted: 0,
-        deleted: 0,
-        message: 'Ya existen siniestros. Usa force=true para regenerar datos.',
-      }
-    }
-
-    let deleted = 0
-    if (existing.length > 0) {
-      for (const claim of existing) {
-        await ctx.db.delete(claim._id)
-      }
-      deleted = existing.length
-    }
+    const existingClaimNumbers = new Set(
+      existing.map((claim: ClaimDoc) => claim.claimNumber),
+    )
 
     let inserted = 0
+    let skippedExisting = 0
     for (let i = 0; i < 120; i += 1) {
-      await ctx.db.insert('claims', buildSyntheticClaim(i))
+      const claim = buildSyntheticClaim(i)
+      if (existingClaimNumbers.has(claim.claimNumber)) {
+        skippedExisting += 1
+        continue
+      }
+      await ctx.db.insert('claims', claim)
+      existingClaimNumbers.add(claim.claimNumber)
       inserted += 1
+    }
+
+    let yellowInserted = 0
+    for (let i = 0; i < 24; i += 1) {
+      const claim = buildYellowRiskClaim(i)
+      if (existingClaimNumbers.has(claim.claimNumber)) {
+        skippedExisting += 1
+        continue
+      }
+      await ctx.db.insert('claims', claim)
+      existingClaimNumbers.add(claim.claimNumber)
+      inserted += 1
+      yellowInserted += 1
     }
 
     return {
       inserted,
-      deleted,
-      message: 'Datos sinteticos de siniestros cargados correctamente.',
+      skippedExisting,
+      yellowInserted,
+      message:
+        'Datos sinteticos cargados; los siniestros existentes se omitieron automaticamente.',
+    }
+  },
+})
+
+export const seedYellowRiskData = mutation({
+  args: { count: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const count = clamp(Math.floor(args.count ?? 12), 1, 200)
+    let inserted = 0
+    for (let i = 0; i < count; i += 1) {
+      await ctx.db.insert('claims', buildYellowRiskClaim(i))
+      inserted += 1
+    }
+    return {
+      inserted,
+      message:
+        'Casos amarillos cargados. Nivel medio: escalar a unidad antifraude para revision documental.',
     }
   },
 })

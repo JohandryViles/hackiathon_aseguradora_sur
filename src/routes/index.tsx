@@ -828,8 +828,12 @@ function Sidebar() {
 		<aside className="hidden border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-950">
 			<div className="sticky top-0 flex h-screen flex-col p-5">
 				<div className="flex items-center gap-3 border-b border-slate-200 pb-5 dark:border-slate-800">
-					<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white">
-						<ShieldCheck aria-hidden size={20} />
+					<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+						<img
+							alt="Logo Aseguradora del Sur"
+							className="h-7 w-7 object-contain"
+							src="/Logo_aseguradora.png"
+						/>
 					</div>
 					<div>
 						<p className="text-sm font-bold">Aseguradora del Sur</p>

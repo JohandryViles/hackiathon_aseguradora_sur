@@ -25,6 +25,11 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: appCss,
 			},
+			{
+				rel: "icon",
+				href: "/Logo_aseguradora.png",
+				type: "image/png",
+			},
 		],
 	}),
 	shellComponent: RootDocument,

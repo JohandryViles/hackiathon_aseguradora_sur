@@ -50,7 +50,6 @@ const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
 	{ href: "#importar", label: "Datos", icon: Database },
 	{ href: "#casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
-	{ href: "#entregables", label: "Entregables", icon: FileCheck2 },
 ];
 
 const quickQuestions = [

@@ -997,6 +997,261 @@ export const importPublicClaims = mutation({
   },
 })
 
+const IMPORT_DAY_MS = 24 * 60 * 60 * 1000
+
+function normalizePolicyImport(row: Record<string, unknown>, index: number) {
+  const policyId = toText(readField(row, ['policyId', 'policy_id', 'policy_number', 'id_poliza', 'poliza_id']))
+  const customerId = toText(readField(row, ['customerId', 'customer_id', 'insured_id', 'id_asegurado']))
+  if (!policyId) return { value: null, reason: `Fila ${index + 1}: policyId requerido` }
+  if (!customerId) return { value: null, reason: `Fila ${index + 1}: customerId requerido` }
+
+  const startAt = toTimestamp(readField(row, ['startAt', 'start_at', 'policy_start', 'fecha_inicio'])) ?? Date.now()
+  const endAt =
+    toTimestamp(readField(row, ['endAt', 'end_at', 'policy_end', 'fecha_fin'])) ??
+    startAt + 365 * IMPORT_DAY_MS
+
+  return {
+    value: {
+      policyId,
+      customerId,
+      lineOfBusiness: toText(readField(row, ['lineOfBusiness', 'line_of_business', 'ramo'])) ?? 'vehicles',
+      startAt,
+      endAt,
+      premium: toNumber(readField(row, ['premium', 'prima'])) ?? 0,
+      sumInsured: toNumber(readField(row, ['sumInsured', 'sum_insured', 'suma_asegurada'])) ?? 0,
+      deductible: toNumber(readField(row, ['deductible', 'deducible'])) ?? 0,
+      salesChannel: toText(readField(row, ['salesChannel', 'sales_channel', 'canal_venta'])) ?? 'web',
+      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
+      status: toText(readField(row, ['status', 'estado'])) ?? 'Activa',
+    },
+  }
+}
+
+function normalizeInsuredImport(row: Record<string, unknown>, index: number) {
+  const customerId = toText(readField(row, ['customerId', 'customer_id', 'insured_id', 'id_asegurado']))
+  if (!customerId) return { value: null, reason: `Fila ${index + 1}: customerId requerido` }
+
+  return {
+    value: {
+      customerId,
+      segment: toText(readField(row, ['segment', 'segmento'])) ?? 'Retail',
+      tenureMonths: Math.round(toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses'])) ?? 0),
+      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
+      policiesCount: Math.round(toNumber(readField(row, ['policiesCount', 'policies_count', 'numero_polizas'])) ?? 0),
+      claimsLast12Months: Math.round(toNumber(readField(row, ['claimsLast12Months', 'claims_last_12_months', 'reclamos_12m'])) ?? 0),
+      delinquent: toBoolean(readField(row, ['delinquent', 'mora_actual', 'en_mora'])) ?? false,
+      customerScoreSimulated: Math.round(toNumber(readField(row, ['customerScoreSimulated', 'customer_score_simulated', 'score_cliente_simulado'])) ?? 650),
+    },
+  }
+}
+
+function normalizeProviderImport(row: Record<string, unknown>, index: number) {
+  const providerId = toText(
+    readField(row, ['providerId', 'provider_id', 'beneficiaryId', 'beneficiary_id', 'id_proveedor', 'id_beneficiario']),
+  )
+  if (!providerId) return { value: null, reason: `Fila ${index + 1}: providerId requerido` }
+
+  return {
+    value: {
+      providerId,
+      type: toText(readField(row, ['type', 'tipo', 'beneficiaryType', 'beneficiario'])) ?? 'Beneficiario',
+      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
+      associatedClaims: Math.round(toNumber(readField(row, ['associatedClaims', 'associated_claims', 'reclamos_asociados'])) ?? 0),
+      averageClaimAmount: toNumber(readField(row, ['averageClaimAmount', 'average_claim_amount', 'monto_promedio'])) ?? 0,
+      observedCaseRate: toNumber(readField(row, ['observedCaseRate', 'observed_case_rate', 'tasa_observada'])) ?? 0,
+      tenureMonths: Math.round(toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses'])) ?? 0),
+      inWatchlist: toBoolean(readField(row, ['inWatchlist', 'in_watchlist', 'provider_watchlist', 'lista_restrictiva'])) ?? false,
+    },
+  }
+}
+
+function normalizeDocumentImport(row: Record<string, unknown>, index: number) {
+  const claimNumber = toText(readField(row, ['claimNumber', 'claim_number', 'claim_id', 'id_siniestro']))
+  const documentType = toText(readField(row, ['documentType', 'document_type', 'tipo_documento']))
+  if (!claimNumber) return { value: null, reason: `Fila ${index + 1}: claimNumber requerido` }
+  if (!documentType) return { value: null, reason: `Fila ${index + 1}: documentType requerido` }
+
+  const documentId =
+    toText(readField(row, ['documentId', 'document_id', 'id_documento'])) ??
+    `DOC-${claimNumber}-${documentType}-${index + 1}`
+
+  return {
+    value: {
+      documentId,
+      claimNumber,
+      documentType,
+      delivered: toBoolean(readField(row, ['delivered', 'entregado'])) ?? true,
+      legible: toBoolean(readField(row, ['legible'])) ?? true,
+      issuedAt: toTimestamp(readField(row, ['issuedAt', 'issued_at', 'fecha_emision'])) ?? Date.now(),
+      inconsistencyDetected:
+        toBoolean(readField(row, ['inconsistencyDetected', 'inconsistency_detected', 'inconsistencia_detectada'])) ?? false,
+      observation: optionalText(readField(row, ['observation', 'observacion'])),
+    },
+  }
+}
+
+function buildImportResult(inserted: number, skipped: number, totalReceived: number, errors: string[], label: string) {
+  return {
+    inserted,
+    skipped,
+    totalReceived,
+    errors,
+    message: inserted > 0 ? `${label} importados correctamente.` : `No se importaron ${label.toLowerCase()}.`,
+  }
+}
+
+export const importPolicies = mutation({
+  args: { rows: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query('policies').collect()
+    const existingIds = new Set(existing.map((policy) => policy.policyId))
+    const incomingIds = new Set<string>()
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < args.rows.length; i += 1) {
+      const row = asRecord(args.rows[i])
+      if (!row) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: estructura invalida`)
+        continue
+      }
+      const normalized = normalizePolicyImport(row, i)
+      if (!normalized.value) {
+        skipped += 1
+        if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
+        continue
+      }
+      if (existingIds.has(normalized.value.policyId) || incomingIds.has(normalized.value.policyId)) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: poliza duplicada (${normalized.value.policyId})`)
+        continue
+      }
+      await ctx.db.insert('policies', normalized.value)
+      existingIds.add(normalized.value.policyId)
+      incomingIds.add(normalized.value.policyId)
+      inserted += 1
+    }
+
+    return buildImportResult(inserted, skipped, args.rows.length, errors, 'Polizas')
+  },
+})
+
+export const importInsureds = mutation({
+  args: { rows: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query('insureds').collect()
+    const existingIds = new Set(existing.map((insured) => insured.customerId))
+    const incomingIds = new Set<string>()
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < args.rows.length; i += 1) {
+      const row = asRecord(args.rows[i])
+      if (!row) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: estructura invalida`)
+        continue
+      }
+      const normalized = normalizeInsuredImport(row, i)
+      if (!normalized.value) {
+        skipped += 1
+        if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
+        continue
+      }
+      if (existingIds.has(normalized.value.customerId) || incomingIds.has(normalized.value.customerId)) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: asegurado duplicado (${normalized.value.customerId})`)
+        continue
+      }
+      await ctx.db.insert('insureds', normalized.value)
+      existingIds.add(normalized.value.customerId)
+      incomingIds.add(normalized.value.customerId)
+      inserted += 1
+    }
+
+    return buildImportResult(inserted, skipped, args.rows.length, errors, 'Asegurados')
+  },
+})
+
+export const importProviders = mutation({
+  args: { rows: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query('providers').collect()
+    const existingIds = new Set(existing.map((provider) => provider.providerId))
+    const incomingIds = new Set<string>()
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < args.rows.length; i += 1) {
+      const row = asRecord(args.rows[i])
+      if (!row) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: estructura invalida`)
+        continue
+      }
+      const normalized = normalizeProviderImport(row, i)
+      if (!normalized.value) {
+        skipped += 1
+        if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
+        continue
+      }
+      if (existingIds.has(normalized.value.providerId) || incomingIds.has(normalized.value.providerId)) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: beneficiario duplicado (${normalized.value.providerId})`)
+        continue
+      }
+      await ctx.db.insert('providers', normalized.value)
+      existingIds.add(normalized.value.providerId)
+      incomingIds.add(normalized.value.providerId)
+      inserted += 1
+    }
+
+    return buildImportResult(inserted, skipped, args.rows.length, errors, 'Beneficiarios')
+  },
+})
+
+export const importClaimDocuments = mutation({
+  args: { rows: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query('claimDocuments').collect()
+    const existingIds = new Set(existing.map((document) => document.documentId))
+    const incomingIds = new Set<string>()
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < args.rows.length; i += 1) {
+      const row = asRecord(args.rows[i])
+      if (!row) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: estructura invalida`)
+        continue
+      }
+      const normalized = normalizeDocumentImport(row, i)
+      if (!normalized.value) {
+        skipped += 1
+        if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
+        continue
+      }
+      if (existingIds.has(normalized.value.documentId) || incomingIds.has(normalized.value.documentId)) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: documento duplicado (${normalized.value.documentId})`)
+        continue
+      }
+      await ctx.db.insert('claimDocuments', normalized.value)
+      existingIds.add(normalized.value.documentId)
+      incomingIds.add(normalized.value.documentId)
+      inserted += 1
+    }
+
+    return buildImportResult(inserted, skipped, args.rows.length, errors, 'Documentos')
+  },
+})
+
 export const getSummary = query({
   args: {},
   handler: async (ctx) => {

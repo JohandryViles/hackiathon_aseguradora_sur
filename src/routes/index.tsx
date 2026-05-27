@@ -1,15 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import {
 	AlertTriangle,
 	BarChart3,
 	Bot,
 	Brain,
-	CheckCircle2,
 	ClipboardList,
 	Database,
 	Download,
-	FileCheck2,
 	FileText,
 	Gauge,
 	LayoutDashboard,
@@ -47,6 +45,7 @@ type ExportableClaim = {
 const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
 	{ href: "#resumen", label: "Resumen", icon: LayoutDashboard },
 	{ href: "#modelo", label: "Modelo IA", icon: Brain },
+	{ href: "/importacion_csv", label: "Importacion", icon: Upload },
 	{ href: "#importar", label: "Datos", icon: Database },
 	{ href: "#casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
@@ -333,6 +332,13 @@ function Home() {
 								</h1>
 							</div>
 							<div className="flex flex-wrap items-center gap-2">
+								<Link
+									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+									to="/importacion_csv"
+								>
+									<Upload aria-hidden size={16} />
+									Importacion
+								</Link>
 								<button
 									className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
 									disabled={isSeeding}
@@ -973,14 +979,3 @@ function TopList({
 	);
 }
 
-function Deliverable({ label, path }: { label: string; path: string }) {
-	return (
-		<div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-			<CheckCircle2 aria-hidden className="mt-0.5 text-emerald-600" size={18} />
-			<div className="min-w-0">
-				<p className="font-semibold">{label}</p>
-				<p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">{path}</p>
-			</div>
-		</div>
-	);
-}

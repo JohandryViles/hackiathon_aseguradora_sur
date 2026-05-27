@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Importacion_csvRouteImport } from './routes/importacion_csv'
+import { Route as CasosRouteImport } from './routes/casos'
+import { Route as ML_AGENTERouteImport } from './routes/ML_AGENTE'
 import { Route as IndexRouteImport } from './routes/index'
 
 const Importacion_csvRoute = Importacion_csvRouteImport.update({
   id: '/importacion_csv',
   path: '/importacion_csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasosRoute = CasosRouteImport.update({
+  id: '/casos',
+  path: '/casos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ML_AGENTERoute = ML_AGENTERouteImport.update({
+  id: '/ML_AGENTE',
+  path: '/ML_AGENTE',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +37,35 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ML_AGENTE': typeof ML_AGENTERoute
+  '/casos': typeof CasosRoute
   '/importacion_csv': typeof Importacion_csvRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ML_AGENTE': typeof ML_AGENTERoute
+  '/casos': typeof CasosRoute
   '/importacion_csv': typeof Importacion_csvRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ML_AGENTE': typeof ML_AGENTERoute
+  '/casos': typeof CasosRoute
   '/importacion_csv': typeof Importacion_csvRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/importacion_csv'
+  fullPaths: '/' | '/ML_AGENTE' | '/casos' | '/importacion_csv'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/importacion_csv'
-  id: '__root__' | '/' | '/importacion_csv'
+  to: '/' | '/ML_AGENTE' | '/casos' | '/importacion_csv'
+  id: '__root__' | '/' | '/ML_AGENTE' | '/casos' | '/importacion_csv'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ML_AGENTERoute: typeof ML_AGENTERoute
+  CasosRoute: typeof CasosRoute
   Importacion_csvRoute: typeof Importacion_csvRoute
 }
 
@@ -56,6 +76,20 @@ declare module '@tanstack/react-router' {
       path: '/importacion_csv'
       fullPath: '/importacion_csv'
       preLoaderRoute: typeof Importacion_csvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/casos': {
+      id: '/casos'
+      path: '/casos'
+      fullPath: '/casos'
+      preLoaderRoute: typeof CasosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ML_AGENTE': {
+      id: '/ML_AGENTE'
+      path: '/ML_AGENTE'
+      fullPath: '/ML_AGENTE'
+      preLoaderRoute: typeof ML_AGENTERouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ML_AGENTERoute: ML_AGENTERoute,
+  CasosRoute: CasosRoute,
   Importacion_csvRoute: Importacion_csvRoute,
 }
 export const routeTree = rootRouteImport

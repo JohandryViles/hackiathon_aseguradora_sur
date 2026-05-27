@@ -99,6 +99,7 @@ export default defineSchema({
   policies: defineTable({
     policyId: v.string(),
     customerId: v.string(),
+    vehicleId: v.optional(v.string()),
     lineOfBusiness: v.string(),
     startAt: v.number(),
     endAt: v.number(),

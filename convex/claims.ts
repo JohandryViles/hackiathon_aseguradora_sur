@@ -310,11 +310,25 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
+function normalizeImportKey(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
 function readField(row: Record<string, unknown>, aliases: string[]): unknown {
   for (const alias of aliases) {
     if (alias in row && row[alias] !== undefined && row[alias] !== null) {
       return row[alias]
     }
+  }
+  const normalizedAliases = new Set(aliases.map(normalizeImportKey))
+  for (const [key, value] of Object.entries(row)) {
+    if (value === undefined || value === null) continue
+    if (normalizedAliases.has(normalizeImportKey(key))) return value
   }
   return undefined
 }
@@ -322,8 +336,22 @@ function readField(row: Record<string, unknown>, aliases: string[]): unknown {
 function toNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value !== 'string') return null
-  const cleaned = value.trim().replaceAll(',', '').replaceAll('$', '')
+  let cleaned = value.trim().replaceAll('$', '').replaceAll('%', '').replace(/\s/g, '')
   if (!cleaned) return null
+  const hasComma = cleaned.includes(',')
+  const hasDot = cleaned.includes('.')
+  if (hasComma && hasDot) {
+    cleaned =
+      cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')
+        ? cleaned.replace(/\./g, '').replace(',', '.')
+        : cleaned.replace(/,/g, '')
+  } else if (hasComma) {
+    const parts = cleaned.split(',')
+    cleaned =
+      parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2
+        ? `${parts[0]}.${parts[1]}`
+        : cleaned.replace(/,/g, '')
+  }
   const parsed = Number(cleaned)
   return Number.isFinite(parsed) ? parsed : null
 }
@@ -387,6 +415,15 @@ function mapChannel(value: unknown): Channel {
   return 'web'
 }
 
+function mapLineOfBusiness(value: unknown): LineOfBusiness {
+  const text = (toText(value) ?? '').toLowerCase()
+  if (text.includes('salud') || text.includes('health')) return 'health'
+  if (text.includes('vida') || text.includes('life')) return 'life'
+  if (text.includes('hogar') || text.includes('home')) return 'home'
+  if (text.includes('general') || text.includes('otro')) return 'general'
+  return 'vehicles'
+}
+
 function normalizePublicClaim(
   row: Record<string, unknown>,
   index: number,
@@ -430,7 +467,7 @@ function normalizePublicClaim(
     driverId: optionalText(readField(row, ['driverId', 'driver_id', 'id_conductor'])),
     providerId: optionalText(readField(row, ['providerId', 'provider_id', 'id_proveedor', 'beneficiario'])),
     customerAge: clamp(Math.round(toNumber(readField(row, ['customerAge', 'age', 'insured_age'])) ?? 37), 18, 90),
-    lineOfBusiness: 'vehicles',
+    lineOfBusiness: mapLineOfBusiness(readField(row, ['lineOfBusiness', 'line_of_business', 'ramo'])),
     coverage: toText(readField(row, ['coverage', 'cobertura', 'ramo'])) ?? claimType,
     claimType,
     channel: mapChannel(readField(row, ['channel', 'report_channel', 'submission_channel'])),
@@ -997,50 +1034,120 @@ export const importPublicClaims = mutation({
   },
 })
 
-const IMPORT_DAY_MS = 24 * 60 * 60 * 1000
-
 function normalizePolicyImport(row: Record<string, unknown>, index: number) {
   const policyId = toText(readField(row, ['policyId', 'policy_id', 'policy_number', 'id_poliza', 'poliza_id']))
   const customerId = toText(readField(row, ['customerId', 'customer_id', 'insured_id', 'id_asegurado']))
-  if (!policyId) return { value: null, reason: `Fila ${index + 1}: policyId requerido` }
-  if (!customerId) return { value: null, reason: `Fila ${index + 1}: customerId requerido` }
+  const lineOfBusiness = toText(readField(row, ['lineOfBusiness', 'line_of_business', 'ramo']))
+  const startAt = toTimestamp(readField(row, ['startAt', 'start_at', 'policy_start', 'fecha_inicio']))
+  const endAt = toTimestamp(readField(row, ['endAt', 'end_at', 'policy_end', 'fecha_fin']))
+  const premium = toNumber(readField(row, ['premium', 'prima']))
+  const sumInsured = toNumber(readField(row, ['sumInsured', 'sum_insured', 'suma_asegurada']))
+  const deductible = toNumber(readField(row, ['deductible', 'deducible']))
+  const salesChannel = toText(readField(row, ['salesChannel', 'sales_channel', 'canal_venta']))
+  const city = toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region']))
+  const status = toText(readField(row, ['status', 'estado', 'estado_poliza']))
+  const missing = [
+    !policyId ? 'id_poliza' : null,
+    !customerId ? 'id_asegurado' : null,
+    !lineOfBusiness ? 'ramo' : null,
+    startAt === null ? 'fecha_inicio' : null,
+    endAt === null ? 'fecha_fin' : null,
+    premium === null ? 'prima' : null,
+    sumInsured === null ? 'suma_asegurada' : null,
+    deductible === null ? 'deducible' : null,
+    !salesChannel ? 'canal_venta' : null,
+    !city ? 'ciudad' : null,
+    !status ? 'estado_poliza' : null,
+  ].filter(Boolean)
 
-  const startAt = toTimestamp(readField(row, ['startAt', 'start_at', 'policy_start', 'fecha_inicio'])) ?? Date.now()
-  const endAt =
-    toTimestamp(readField(row, ['endAt', 'end_at', 'policy_end', 'fecha_fin'])) ??
-    startAt + 365 * IMPORT_DAY_MS
+  if (
+    missing.length > 0 ||
+    !policyId ||
+    !customerId ||
+    !lineOfBusiness ||
+    startAt === null ||
+    endAt === null ||
+    premium === null ||
+    sumInsured === null ||
+    deductible === null ||
+    !salesChannel ||
+    !city ||
+    !status
+  ) {
+    return { value: null, reason: `Fila ${index + 1}: faltan campos minimos (${missing.join(', ')})` }
+  }
 
   return {
     value: {
       policyId,
       customerId,
-      lineOfBusiness: toText(readField(row, ['lineOfBusiness', 'line_of_business', 'ramo'])) ?? 'vehicles',
+      vehicleId: optionalText(readField(row, ['vehicleId', 'vehicle_id', 'id_vehiculo'])),
+      lineOfBusiness,
       startAt,
       endAt,
-      premium: toNumber(readField(row, ['premium', 'prima'])) ?? 0,
-      sumInsured: toNumber(readField(row, ['sumInsured', 'sum_insured', 'suma_asegurada'])) ?? 0,
-      deductible: toNumber(readField(row, ['deductible', 'deducible'])) ?? 0,
-      salesChannel: toText(readField(row, ['salesChannel', 'sales_channel', 'canal_venta'])) ?? 'web',
-      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
-      status: toText(readField(row, ['status', 'estado'])) ?? 'Activa',
+      premium,
+      sumInsured,
+      deductible,
+      salesChannel,
+      city,
+      status,
     },
   }
 }
 
 function normalizeInsuredImport(row: Record<string, unknown>, index: number) {
   const customerId = toText(readField(row, ['customerId', 'customer_id', 'insured_id', 'id_asegurado']))
-  if (!customerId) return { value: null, reason: `Fila ${index + 1}: customerId requerido` }
+  const segment = toText(readField(row, ['segment', 'segmento']))
+  const tenureMonths = toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses', 'antiguedad']))
+  const city = toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region']))
+  const policiesCount = toNumber(readField(row, ['policiesCount', 'policies_count', 'numero_polizas', 'numero_de_polizas']))
+  const claimsLast12Months = toNumber(
+    readField(row, [
+      'claimsLast12Months',
+      'claims_last_12_months',
+      'reclamos_12m',
+      'reclamos_ultimos_12_meses',
+    ]),
+  )
+  const delinquent = toBoolean(readField(row, ['delinquent', 'mora_actual', 'en_mora']))
+  const customerScoreSimulated = toNumber(
+    readField(row, ['customerScoreSimulated', 'customer_score_simulated', 'score_cliente_simulado']),
+  )
+  const missing = [
+    !customerId ? 'id_asegurado' : null,
+    !segment ? 'segmento' : null,
+    tenureMonths === null ? 'antiguedad' : null,
+    !city ? 'ciudad' : null,
+    policiesCount === null ? 'numero_polizas' : null,
+    claimsLast12Months === null ? 'reclamos_ultimos_12_meses' : null,
+    delinquent === null ? 'mora_actual' : null,
+    customerScoreSimulated === null ? 'score_cliente_simulado' : null,
+  ].filter(Boolean)
+
+  if (
+    missing.length > 0 ||
+    !customerId ||
+    !segment ||
+    tenureMonths === null ||
+    !city ||
+    policiesCount === null ||
+    claimsLast12Months === null ||
+    delinquent === null ||
+    customerScoreSimulated === null
+  ) {
+    return { value: null, reason: `Fila ${index + 1}: faltan campos minimos (${missing.join(', ')})` }
+  }
 
   return {
     value: {
       customerId,
-      segment: toText(readField(row, ['segment', 'segmento'])) ?? 'Retail',
-      tenureMonths: Math.round(toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses'])) ?? 0),
-      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
-      policiesCount: Math.round(toNumber(readField(row, ['policiesCount', 'policies_count', 'numero_polizas'])) ?? 0),
-      claimsLast12Months: Math.round(toNumber(readField(row, ['claimsLast12Months', 'claims_last_12_months', 'reclamos_12m'])) ?? 0),
-      delinquent: toBoolean(readField(row, ['delinquent', 'mora_actual', 'en_mora'])) ?? false,
-      customerScoreSimulated: Math.round(toNumber(readField(row, ['customerScoreSimulated', 'customer_score_simulated', 'score_cliente_simulado'])) ?? 650),
+      segment,
+      tenureMonths: Math.round(tenureMonths),
+      city,
+      policiesCount: Math.round(policiesCount),
+      claimsLast12Months: Math.round(claimsLast12Months),
+      delinquent,
+      customerScoreSimulated: Math.round(customerScoreSimulated),
     },
   }
 }
@@ -1049,17 +1156,54 @@ function normalizeProviderImport(row: Record<string, unknown>, index: number) {
   const providerId = toText(
     readField(row, ['providerId', 'provider_id', 'beneficiaryId', 'beneficiary_id', 'id_proveedor', 'id_beneficiario']),
   )
-  if (!providerId) return { value: null, reason: `Fila ${index + 1}: providerId requerido` }
+  const type = toText(readField(row, ['type', 'tipo', 'beneficiaryType', 'beneficiario']))
+  const city = toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region']))
+  const associatedClaims = toNumber(readField(row, ['associatedClaims', 'associated_claims', 'reclamos_asociados']))
+  const averageClaimAmount = toNumber(
+    readField(row, ['averageClaimAmount', 'average_claim_amount', 'monto_promedio', 'monto_promedio_reclamado']),
+  )
+  const observedCaseRateRaw = toNumber(
+    readField(row, [
+      'observedCaseRate',
+      'observed_case_rate',
+      'tasa_observada',
+      'porcentaje_casos_observados',
+      'porcentaje_de_casos_observados',
+    ]),
+  )
+  const tenureMonths = toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses', 'antiguedad']))
+  const missing = [
+    !providerId ? 'id_proveedor' : null,
+    !type ? 'tipo' : null,
+    !city ? 'ciudad' : null,
+    associatedClaims === null ? 'reclamos_asociados' : null,
+    averageClaimAmount === null ? 'monto_promedio_reclamado' : null,
+    observedCaseRateRaw === null ? 'porcentaje_de_casos_observados' : null,
+    tenureMonths === null ? 'antiguedad' : null,
+  ].filter(Boolean)
+
+  if (
+    missing.length > 0 ||
+    !providerId ||
+    !type ||
+    !city ||
+    associatedClaims === null ||
+    averageClaimAmount === null ||
+    observedCaseRateRaw === null ||
+    tenureMonths === null
+  ) {
+    return { value: null, reason: `Fila ${index + 1}: faltan campos minimos (${missing.join(', ')})` }
+  }
 
   return {
     value: {
       providerId,
-      type: toText(readField(row, ['type', 'tipo', 'beneficiaryType', 'beneficiario'])) ?? 'Beneficiario',
-      city: toText(readField(row, ['city', 'ciudad', 'locationRegion', 'region'])) ?? 'Sin dato',
-      associatedClaims: Math.round(toNumber(readField(row, ['associatedClaims', 'associated_claims', 'reclamos_asociados'])) ?? 0),
-      averageClaimAmount: toNumber(readField(row, ['averageClaimAmount', 'average_claim_amount', 'monto_promedio'])) ?? 0,
-      observedCaseRate: toNumber(readField(row, ['observedCaseRate', 'observed_case_rate', 'tasa_observada'])) ?? 0,
-      tenureMonths: Math.round(toNumber(readField(row, ['tenureMonths', 'tenure_months', 'antiguedad_meses'])) ?? 0),
+      type,
+      city,
+      associatedClaims: Math.round(associatedClaims),
+      averageClaimAmount,
+      observedCaseRate: observedCaseRateRaw > 1 ? round(observedCaseRateRaw / 100, 4) : observedCaseRateRaw,
+      tenureMonths: Math.round(tenureMonths),
       inWatchlist: toBoolean(readField(row, ['inWatchlist', 'in_watchlist', 'provider_watchlist', 'lista_restrictiva'])) ?? false,
     },
   }
@@ -1068,23 +1212,45 @@ function normalizeProviderImport(row: Record<string, unknown>, index: number) {
 function normalizeDocumentImport(row: Record<string, unknown>, index: number) {
   const claimNumber = toText(readField(row, ['claimNumber', 'claim_number', 'claim_id', 'id_siniestro']))
   const documentType = toText(readField(row, ['documentType', 'document_type', 'tipo_documento']))
-  if (!claimNumber) return { value: null, reason: `Fila ${index + 1}: claimNumber requerido` }
-  if (!documentType) return { value: null, reason: `Fila ${index + 1}: documentType requerido` }
+  const documentId = toText(readField(row, ['documentId', 'document_id', 'id_documento']))
+  const delivered = toBoolean(readField(row, ['delivered', 'entregado']))
+  const legible = toBoolean(readField(row, ['legible']))
+  const issuedAt = toTimestamp(readField(row, ['issuedAt', 'issued_at', 'fecha_emision']))
+  const inconsistencyDetected = toBoolean(
+    readField(row, ['inconsistencyDetected', 'inconsistency_detected', 'inconsistencia_detectada']),
+  )
+  const missing = [
+    !documentId ? 'id_documento' : null,
+    !claimNumber ? 'id_siniestro' : null,
+    !documentType ? 'tipo_documento' : null,
+    delivered === null ? 'entregado' : null,
+    legible === null ? 'legible' : null,
+    issuedAt === null ? 'fecha_emision' : null,
+    inconsistencyDetected === null ? 'inconsistencia_detectada' : null,
+  ].filter(Boolean)
 
-  const documentId =
-    toText(readField(row, ['documentId', 'document_id', 'id_documento'])) ??
-    `DOC-${claimNumber}-${documentType}-${index + 1}`
+  if (
+    missing.length > 0 ||
+    !documentId ||
+    !claimNumber ||
+    !documentType ||
+    delivered === null ||
+    legible === null ||
+    issuedAt === null ||
+    inconsistencyDetected === null
+  ) {
+    return { value: null, reason: `Fila ${index + 1}: faltan campos minimos (${missing.join(', ')})` }
+  }
 
   return {
     value: {
       documentId,
       claimNumber,
       documentType,
-      delivered: toBoolean(readField(row, ['delivered', 'entregado'])) ?? true,
-      legible: toBoolean(readField(row, ['legible'])) ?? true,
-      issuedAt: toTimestamp(readField(row, ['issuedAt', 'issued_at', 'fecha_emision'])) ?? Date.now(),
-      inconsistencyDetected:
-        toBoolean(readField(row, ['inconsistencyDetected', 'inconsistency_detected', 'inconsistencia_detectada'])) ?? false,
+      delivered,
+      legible,
+      issuedAt,
+      inconsistencyDetected,
       observation: optionalText(readField(row, ['observation', 'observacion'])),
     },
   }

@@ -10,22 +10,21 @@ import {
 	Gauge,
 	LayoutDashboard,
 	Moon,
-	Search,
 	Send,
 	ShieldCheck,
 	Sun,
 	Upload,
 } from "lucide-react";
-import { type ComponentType, useEffect, useMemo, useState } from "react";
+import { type ComponentType, useEffect, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-type RiskFilter = "all" | "green" | "yellow" | "red";
 type IconComponent = ComponentType<{ className?: string; size?: number }>;
 
 type ExportableClaim = {
+	_id?: string;
 	claimNumber: string;
 	customerId: string;
 	providerId?: string;
@@ -41,8 +40,9 @@ type ExportableClaim = {
 
 const navItems: Array<{ href: string; label: string; icon: IconComponent }> = [
 	{ href: "#resumen", label: "Resumen", icon: LayoutDashboard },
-	{ href: "#modelo", label: "Modelo IA", icon: Brain },
-	{ href: "#casos", label: "Casos", icon: ClipboardList },
+	{ href: "/ML_AGENTE", label: "ML + Agente", icon: Brain },
+	{ href: "#modelo", label: "Datos demo", icon: Gauge },
+	{ href: "/casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
 ];
 
@@ -109,8 +109,6 @@ function downloadCasesCsv(claims: ExportableClaim[]) {
 }
 
 function Home() {
-	const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
-	const [search, setSearch] = useState("");
 	const [nlQuestion, setNlQuestion] = useState("");
 	const [submittedQuestion, setSubmittedQuestion] = useState("");
 	const [isDarkMode, setIsDarkMode] = useState(false);
@@ -128,28 +126,18 @@ function Home() {
 	}, []);
 
 	const summary = useQuery(api.claims.getSummary, {});
-	const claims = useQuery(api.claims.listWithRisk, {
-		riskLevel: riskFilter === "all" ? undefined : riskFilter,
-		search: search.trim() ? search.trim() : undefined,
-		limit: 80,
-	});
+	const exportClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
 	const assistantResponse = useQuery(
 		api.claims.askAnalystAssistant,
 		submittedQuestion.trim() ? { question: submittedQuestion } : "skip",
 	);
-	const currentClaims = claims ?? [];
-
-	const riskPillStyles = useMemo(
-		() => ({
-			green:
-				"bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:ring-emerald-500/30",
-			yellow:
-				"bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:ring-amber-500/30",
-			red:
-				"bg-rose-100 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:ring-rose-500/30",
-		}),
-		[],
-	);
+	const currentClaims = exportClaims ?? [];
+	const recentRedClaims = currentClaims
+		.filter((claim) => claim.riskLevel === "red")
+		.slice(0, 5);
+	const recentYellowClaims = currentClaims
+		.filter((claim) => claim.riskLevel === "yellow")
+		.slice(0, 5);
 
 	const onAsk = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -188,7 +176,7 @@ function Home() {
 							</div>
 							<div className="flex flex-wrap items-center gap-2">
 								<Link
-									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+									className="inline-flex h-10 items-center gap-2 rounded-md bg-black px-4 text-sm font-medium text-white hover:bg-slate-800"
 									to="/importacion_csv"
 								>
 									<Upload aria-hidden size={16} />
@@ -319,163 +307,62 @@ function Home() {
 							</div>
 						</section>
 
-						<section className="space-y-4" id="modelo">
+						<section className="space-y-4">
 							<SectionHeader
-								icon={Brain}
-								kicker="Modelo y trazabilidad"
-								title="IA supervisada + reglas del negocio"
-								description="El prototipo usa RandomForestClassifier entrenado con datos sinteticos y combina su probabilidad con alertas explicables."
+								icon={ClipboardList}
+								kicker="Revision"
+								title="Ultimos casos por revisar"
+								description="Cinco casos recientes en rojo y amarillo para priorizar la revision humana."
 							/>
-							<div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-								<div className="rounded-lg border border-slate-200 bg-white p-4">
-									<div className="grid gap-3 text-sm md:grid-cols-3">
-										<InfoLine
-											label="Version"
-											value={
-												summary?.modelVersion ?? "sklearn-random-forest-v1"
-											}
-										/>
-										<InfoLine label="Precision" value="0.9306" />
-										<InfoLine label="Recall" value="0.9853" />
-										<InfoLine label="F1-score" value="0.9571" />
-										<InfoLine label="ROC-AUC" value="0.9980" />
-										<InfoLine
-											label="Docs criticos"
-											value={summary?.criticalDocumentsMissing ?? 0}
-										/>
-									</div>
-								</div>
-
-								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-									<h2 className="font-semibold">Modelo de datos demo</h2>
-									<div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-										<InfoLine
-											label="Polizas"
-											value={summary?.dataModelCounts?.policies ?? 0}
-										/>
-										<InfoLine
-											label="Asegurados"
-											value={summary?.dataModelCounts?.insureds ?? 0}
-										/>
-										<InfoLine
-											label="Vehiculos"
-											value={summary?.dataModelCounts?.vehicles ?? 0}
-										/>
-										<InfoLine
-											label="Proveedores"
-											value={summary?.dataModelCounts?.providers ?? 0}
-										/>
-										<InfoLine
-											label="Documentos"
-											value={summary?.dataModelCounts?.documents ?? 0}
-										/>
-										<InfoLine
-											label="Publicos"
-											value={summary?.bySource?.public ?? 0}
-										/>
-									</div>
-								</div>
+							<div className="grid gap-4 xl:grid-cols-2">
+								<PriorityGroup
+									claims={recentRedClaims}
+									color="red"
+									emptyText="Sin casos rojos por revisar."
+									title="Prioridad urgente"
+								/>
+								<PriorityGroup
+									claims={recentYellowClaims}
+									color="yellow"
+									emptyText="Sin casos amarillos por revisar."
+									title="Prioridad"
+								/>
 							</div>
 						</section>
 
-						<section className="space-y-4" id="casos">
+						<section className="space-y-4" id="modelo">
 							<SectionHeader
-								icon={ClipboardList}
-								kicker="Bandeja antifraude"
-								title="Casos priorizados"
-								description="Filtra, busca y exporta la cola de revision. Cada caso muestra score ML, score de reglas y explicacion."
+								icon={Gauge}
+								kicker="Datos demo"
+								title="Modelo de datos demo"
+								description="Conteo operativo de las tablas cargadas en Convex para alimentar el dashboard y las consultas."
 							/>
-							<div className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
-								<div className="flex flex-col gap-3 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800">
-									<label className="relative min-w-64 flex-1">
-										<Search
-											aria-hidden
-											className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-											size={16}
-										/>
-										<input
-											className="h-10 w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950"
-											onChange={(event) => setSearch(event.target.value)}
-											placeholder="Buscar claim, cliente, proveedor, tipo o ciudad"
-											type="text"
-											value={search}
-										/>
-									</label>
-									<select
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-										onChange={(event) =>
-											setRiskFilter(event.target.value as RiskFilter)
-										}
-										value={riskFilter}
-									>
-										<option value="all">Todos los riesgos</option>
-										<option value="green">Verde Bajo</option>
-										<option value="yellow">Amarillo Medio</option>
-										<option value="red">Rojo Alto</option>
-									</select>
-								</div>
-								<div className="overflow-x-auto">
-									<table className="min-w-full text-sm">
-										<thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-											<tr>
-												<th className="px-4 py-3 font-medium">Claim</th>
-												<th className="px-4 py-3 font-medium">Cliente</th>
-												<th className="px-4 py-3 font-medium">Proveedor</th>
-												<th className="px-4 py-3 font-medium">Monto</th>
-												<th className="px-4 py-3 font-medium">IA</th>
-												<th className="px-4 py-3 font-medium">Reglas</th>
-												<th className="px-4 py-3 font-medium">Final</th>
-												<th className="px-4 py-3 font-medium">Nivel</th>
-												<th className="px-4 py-3 font-medium">Alertas</th>
-											</tr>
-										</thead>
-										<tbody>
-											{currentClaims.map((claim) => (
-												<tr
-													className="border-t border-slate-100 align-top hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
-													key={claim._id}
-												>
-													<td className="px-4 py-3 font-medium">
-														{claim.claimNumber}
-													</td>
-													<td className="px-4 py-3">{claim.customerId}</td>
-													<td className="px-4 py-3">
-														{claim.providerId ?? "-"}
-													</td>
-													<td className="px-4 py-3">
-														${claim.claimAmount.toLocaleString("en-US")}
-													</td>
-													<td className="px-4 py-3">{claim.mlScore ?? "-"}</td>
-													<td className="px-4 py-3">{claim.ruleRiskScore}</td>
-													<td className="px-4 py-3 font-semibold">
-														{claim.riskScore}
-													</td>
-													<td className="px-4 py-3">
-														<span
-															className={`rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[claim.riskLevel]}`}
-														>
-															{riskLevelText(claim.riskLevel)}
-														</span>
-													</td>
-													<td className="max-w-sm px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
-														{claim.anomalyFlags.length > 0
-															? claim.anomalyFlags.slice(0, 2).join(" | ")
-															: "Sin alertas relevantes"}
-													</td>
-												</tr>
-											))}
-											{claims && currentClaims.length === 0 ? (
-												<tr>
-													<td
-														className="px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-300"
-														colSpan={9}
-													>
-														No hay resultados para el filtro actual.
-													</td>
-												</tr>
-											) : null}
-										</tbody>
-									</table>
+							<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+								<div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+									<InfoLine
+										label="Polizas"
+										value={summary?.dataModelCounts?.policies ?? 0}
+									/>
+									<InfoLine
+										label="Asegurados"
+										value={summary?.dataModelCounts?.insureds ?? 0}
+									/>
+									<InfoLine
+										label="Vehiculos"
+										value={summary?.dataModelCounts?.vehicles ?? 0}
+									/>
+									<InfoLine
+										label="Proveedores"
+										value={summary?.dataModelCounts?.providers ?? 0}
+									/>
+									<InfoLine
+										label="Documentos"
+										value={summary?.dataModelCounts?.documents ?? 0}
+									/>
+									<InfoLine
+										label="Publicos"
+										value={summary?.bySource?.public ?? 0}
+									/>
 								</div>
 							</div>
 						</section>
@@ -629,6 +516,61 @@ function SectionHeader({
 				</div>
 				<h2 className="mt-1 text-xl font-bold tracking-tight">{title}</h2>
 				<p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">{description}</p>
+			</div>
+		</div>
+	);
+}
+
+function PriorityGroup({
+	claims,
+	color,
+	emptyText,
+	title,
+}: {
+	claims: ExportableClaim[];
+	color: "red" | "yellow";
+	emptyText: string;
+	title: string;
+}) {
+	const styles = {
+		red: {
+			container:
+				"border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100",
+			row: "border-rose-200/80 dark:border-rose-900/60",
+		},
+		yellow: {
+			container:
+				"border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100",
+			row: "border-amber-200/80 dark:border-amber-900/60",
+		},
+	};
+
+	return (
+		<div className={`rounded-lg border p-4 ${styles[color].container}`}>
+			<h3 className="font-semibold">{title}</h3>
+			<div className="mt-3 divide-y text-sm">
+				{claims.map((claim) => (
+					<div className={`grid gap-2 py-3 ${styles[color].row}`} key={claim._id ?? claim.claimNumber}>
+						<div className="flex items-start justify-between gap-3">
+							<div className="min-w-0">
+								<p className="truncate font-semibold">{claim.claimNumber}</p>
+								<p className="mt-0.5 text-xs opacity-80">
+									{claim.customerId} - {claim.providerId ?? "Sin proveedor"}
+								</p>
+							</div>
+							<div className="text-right">
+								<p className="font-bold">{claim.riskScore}</p>
+								<p className="text-xs opacity-80">score</p>
+							</div>
+						</div>
+						<p className="text-xs opacity-85">
+							{claim.anomalyFlags[0] ?? claim.recommendedAction}
+						</p>
+					</div>
+				))}
+				{claims.length === 0 ? (
+					<p className="py-4 text-sm opacity-80">{emptyText}</p>
+				) : null}
 			</div>
 		</div>
 	);

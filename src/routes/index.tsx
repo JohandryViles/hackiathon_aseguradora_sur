@@ -748,7 +748,7 @@ function Sidebar() {
 						<ShieldCheck aria-hidden size={20} />
 					</div>
 					<div>
-						<p className="text-sm font-bold">FraudIA Claims</p>
+						<p className="text-sm font-bold">Aseguradora del Sur</p>
 						<p className="text-xs text-slate-500">Analisis de siniestros</p>
 					</div>
 				</div>
@@ -769,11 +769,10 @@ function Sidebar() {
 				<div className="mt-auto rounded-lg border border-slate-200 bg-slate-50 p-4">
 					<div className="flex items-center gap-2 text-sm font-semibold">
 						<AlertTriangle aria-hidden className="text-amber-600" size={16} />
-						Alerta, no acusacion
+						Importante
 					</div>
 					<p className="mt-2 text-xs leading-5 text-slate-600">
-						El sistema prioriza revision humana y mantiene trazabilidad del
-						score.
+						Detector de Posibles Fraudes en Siniestros usando Inteligencia Artificial
 					</p>
 				</div>
 			</div>

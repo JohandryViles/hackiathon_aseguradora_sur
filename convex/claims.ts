@@ -276,6 +276,35 @@ function buildSyntheticClaim(index: number): ClaimInput {
   }
 }
 
+function buildYellowRiskClaim(index: number): ClaimInput {
+  const now = Date.now()
+  const occurredAt = now - (10 + index) * 24 * 60 * 60 * 1000
+  const submittedAt = occurredAt + 2 * 24 * 60 * 60 * 1000
+  const estimatedDamageAmount = 5400 + index * 180
+  const claimAmount = Math.round(estimatedDamageAmount * 1.4)
+
+  return {
+    claimNumber: `YEL-${String(index + 1).padStart(4, '0')}`,
+    policyId: `POL-YEL-${7000 + index}`,
+    customerId: `CUST-YEL-${6000 + index}`,
+    customerAge: 28 + (index % 21),
+    claimType: index % 3 === 0 ? 'theft' : 'collision',
+    channel: index % 2 === 0 ? 'web' : 'broker',
+    locationRegion: index % 2 === 0 ? 'Quito' : 'Guayaquil',
+    vehicleYear: 2011 + (index % 9),
+    claimAmount,
+    estimatedDamageAmount,
+    incidentsLast12Months: 2,
+    daysSincePolicyStart: 70,
+    occurredAt,
+    submittedAt,
+    isNightClaim: false,
+    reportNarrative: 'Caso de riesgo medio para revision documental en unidad antifraude.',
+    source: 'synthetic',
+    sourceDataset: 'yellow-risk-seed',
+  }
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== 'object' || value === null) return null
   return value as Record<string, unknown>
@@ -733,8 +762,9 @@ function topBy<T extends string>(
 
 export const seedSyntheticData = mutation({
   args: { force: v.optional(v.boolean()) },
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const existing = await ctx.db.query('claims').collect()
+<<<<<<< HEAD
     if (existing.length > 0 && !args.force) {
       return {
         inserted: 0,
@@ -752,11 +782,17 @@ export const seedSyntheticData = mutation({
         deleted += docs.length
       }
     }
+=======
+    const existingClaimNumbers = new Set(
+      existing.map((claim: ClaimDoc) => claim.claimNumber),
+    )
+>>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
 
     const insertedCustomers = new Set<string>()
     const insertedVehicles = new Set<string>()
     const insertedProviders = new Set<string>()
     let inserted = 0
+<<<<<<< HEAD
 
     for (let i = 0; i < 160; i += 1) {
       const claim = buildSyntheticClaim(i)
@@ -835,13 +871,61 @@ export const seedSyntheticData = mutation({
       }
 
       await ctx.db.insert('claims', claim)
+=======
+    let skippedExisting = 0
+    for (let i = 0; i < 120; i += 1) {
+      const claim = buildSyntheticClaim(i)
+      if (existingClaimNumbers.has(claim.claimNumber)) {
+        skippedExisting += 1
+        continue
+      }
+      await ctx.db.insert('claims', claim)
+      existingClaimNumbers.add(claim.claimNumber)
+>>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
       inserted += 1
+    }
+
+    let yellowInserted = 0
+    for (let i = 0; i < 24; i += 1) {
+      const claim = buildYellowRiskClaim(i)
+      if (existingClaimNumbers.has(claim.claimNumber)) {
+        skippedExisting += 1
+        continue
+      }
+      await ctx.db.insert('claims', claim)
+      existingClaimNumbers.add(claim.claimNumber)
+      inserted += 1
+      yellowInserted += 1
     }
 
     return {
       inserted,
+<<<<<<< HEAD
       deleted,
       message: 'Datos sinteticos ampliados con score ML, reglas y tablas complementarias.',
+=======
+      skippedExisting,
+      yellowInserted,
+      message:
+        'Datos sinteticos cargados; los siniestros existentes se omitieron automaticamente.',
+    }
+  },
+})
+
+export const seedYellowRiskData = mutation({
+  args: { count: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const count = clamp(Math.floor(args.count ?? 12), 1, 200)
+    let inserted = 0
+    for (let i = 0; i < count; i += 1) {
+      await ctx.db.insert('claims', buildYellowRiskClaim(i))
+      inserted += 1
+    }
+    return {
+      inserted,
+      message:
+        'Casos amarillos cargados. Nivel medio: escalar a unidad antifraude para revision documental.',
+>>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
     }
   },
 })

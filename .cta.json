@@ -1,0 +1,23 @@
+{
+  "projectName": "aseguradora_sur_convex",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "bun",
+  "includeExamples": false,
+  "tailwind": true,
+  "addOnOptions": {},
+  "envVarValues": {
+    "CONVEX_DEPLOYMENT": "acoustic-tiger-618",
+    "VITE_CONVEX_URL": "https://acoustic-tiger-618.convex.cloud"
+  },
+  "git": true,
+  "install": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "biome",
+    "nitro",
+    "convex"
+  ]
+}

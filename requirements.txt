@@ -1,0 +1,8 @@
+# JS/TS stack reference for this project
+# Note: This project installs dependencies via package.json (bun/npm), not pip.
+
+convex>=1.32.0
+@convex-dev/react-query>=0.1.0
+@tanstack/react-router
+@tanstack/react-start
+@tanstack/react-router-ssr-query

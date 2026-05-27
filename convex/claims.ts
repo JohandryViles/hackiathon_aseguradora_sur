@@ -762,44 +762,31 @@ function topBy<T extends string>(
 
 export const seedSyntheticData = mutation({
   args: { force: v.optional(v.boolean()) },
-  handler: async (ctx) => {
-    const existing = await ctx.db.query('claims').collect()
-<<<<<<< HEAD
-    if (existing.length > 0 && !args.force) {
-      return {
-        inserted: 0,
-        deleted: 0,
-        message: 'Ya existen siniestros. Usa force=true para regenerar datos.',
-      }
-    }
+  handler: async (ctx, args) => {
+    const shouldForce = args.force === true
+    const existingClaims = await ctx.db.query('claims').collect()
+    const existingPolicies = await ctx.db.query('policies').collect()
+    const existingInsureds = await ctx.db.query('insureds').collect()
+    const existingVehicles = await ctx.db.query('vehicles').collect()
+    const existingProviders = await ctx.db.query('providers').collect()
+    const existingDocuments = await ctx.db.query('claimDocuments').collect()
 
-    let deleted = 0
-    if (args.force) {
-      const tables = ['claims', 'policies', 'insureds', 'vehicles', 'providers', 'claimDocuments'] as const
-      for (const table of tables) {
-        const docs = await ctx.db.query(table).collect()
-        for (const doc of docs) await ctx.db.delete(doc._id)
-        deleted += docs.length
-      }
-    }
-=======
-    const existingClaimNumbers = new Set(
-      existing.map((claim: ClaimDoc) => claim.claimNumber),
-    )
->>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
+    const existingClaimNumbers = new Set(existingClaims.map((claim) => claim.claimNumber))
+    const existingPolicyIds = new Set(existingPolicies.map((policy) => policy.policyId))
+    const existingCustomerIds = new Set(existingInsureds.map((insured) => insured.customerId))
+    const existingVehicleIds = new Set(existingVehicles.map((vehicle) => vehicle.vehicleId))
+    const existingProviderIds = new Set(existingProviders.map((provider) => provider.providerId))
+    const existingDocumentIds = new Set(existingDocuments.map((document) => document.documentId))
 
-    const insertedCustomers = new Set<string>()
-    const insertedVehicles = new Set<string>()
-    const insertedProviders = new Set<string>()
     let inserted = 0
-<<<<<<< HEAD
+    let skippedExisting = 0
+    let yellowInserted = 0
 
-    for (let i = 0; i < 160; i += 1) {
-      const claim = buildSyntheticClaim(i)
+    const ensureRelatedData = async (claim: ClaimInput, i: number) => {
       const startAt = claim.occurredAt - claim.daysSincePolicyStart * 24 * 60 * 60 * 1000
       const endAt = claim.occurredAt + (claim.daysUntilPolicyEnd ?? 365) * 24 * 60 * 60 * 1000
 
-      if (!insertedCustomers.has(claim.customerId)) {
+      if (!existingCustomerIds.has(claim.customerId)) {
         await ctx.db.insert('insureds', {
           customerId: claim.customerId,
           segment: claim.customerSegment ?? 'Retail',
@@ -810,10 +797,10 @@ export const seedSyntheticData = mutation({
           delinquent: claim.customerDelinquent ?? false,
           customerScoreSimulated: claim.customerScoreSimulated ?? 650,
         })
-        insertedCustomers.add(claim.customerId)
+        existingCustomerIds.add(claim.customerId)
       }
 
-      if (claim.vehicleId && !insertedVehicles.has(claim.vehicleId)) {
+      if (claim.vehicleId && !existingVehicleIds.has(claim.vehicleId)) {
         await ctx.db.insert('vehicles', {
           vehicleId: claim.vehicleId,
           customerId: claim.customerId,
@@ -824,10 +811,10 @@ export const seedSyntheticData = mutation({
           model: claim.vehicleModel ?? 'Modelo',
           year: claim.vehicleYear,
         })
-        insertedVehicles.add(claim.vehicleId)
+        existingVehicleIds.add(claim.vehicleId)
       }
 
-      if (claim.providerId && !insertedProviders.has(claim.providerId)) {
+      if (claim.providerId && !existingProviderIds.has(claim.providerId)) {
         await ctx.db.insert('providers', {
           providerId: claim.providerId,
           type: claim.beneficiaryType ?? 'Taller',
@@ -838,28 +825,33 @@ export const seedSyntheticData = mutation({
           tenureMonths: Math.floor(6 + seedRandom(i + 300) * 72),
           inWatchlist: claim.providerInWatchlist ?? false,
         })
-        insertedProviders.add(claim.providerId)
+        existingProviderIds.add(claim.providerId)
       }
 
-      await ctx.db.insert('policies', {
-        policyId: claim.policyId,
-        customerId: claim.customerId,
-        lineOfBusiness: claim.lineOfBusiness ?? 'vehicles',
-        startAt,
-        endAt,
-        premium: Math.round((claim.sumInsured ?? claim.claimAmount * 2) * 0.035),
-        sumInsured: claim.sumInsured ?? claim.claimAmount * 2,
-        deductible: claim.deductible ?? 450,
-        salesChannel: claim.channel,
-        city: claim.locationRegion,
-        status: 'Activa',
-      })
+      if (!existingPolicyIds.has(claim.policyId)) {
+        await ctx.db.insert('policies', {
+          policyId: claim.policyId,
+          customerId: claim.customerId,
+          lineOfBusiness: claim.lineOfBusiness ?? 'vehicles',
+          startAt,
+          endAt,
+          premium: Math.round((claim.sumInsured ?? claim.claimAmount * 2) * 0.035),
+          sumInsured: claim.sumInsured ?? claim.claimAmount * 2,
+          deductible: claim.deductible ?? 450,
+          salesChannel: claim.channel,
+          city: claim.locationRegion,
+          status: 'Activa',
+        })
+        existingPolicyIds.add(claim.policyId)
+      }
 
       const documentTypes = ['denuncia', 'factura', 'informe_pericial']
       for (let j = 0; j < documentTypes.length; j += 1) {
+        const documentId = `DOC-${claim.claimNumber}-${j + 1}`
+        if (existingDocumentIds.has(documentId)) continue
         const isMissingCritical = claim.missingCriticalDocument && j === 0
         await ctx.db.insert('claimDocuments', {
-          documentId: `DOC-${claim.claimNumber}-${j + 1}`,
+          documentId,
           claimNumber: claim.claimNumber,
           documentType: documentTypes[j],
           delivered: !isMissingCritical,
@@ -868,30 +860,29 @@ export const seedSyntheticData = mutation({
           inconsistencyDetected: claim.documentsInconsistent ?? false,
           observation: isMissingCritical ? 'Documento legal obligatorio pendiente' : undefined,
         })
+        existingDocumentIds.add(documentId)
       }
+    }
 
-      await ctx.db.insert('claims', claim)
-=======
-    let skippedExisting = 0
     for (let i = 0; i < 120; i += 1) {
       const claim = buildSyntheticClaim(i)
       if (existingClaimNumbers.has(claim.claimNumber)) {
         skippedExisting += 1
         continue
       }
+      await ensureRelatedData(claim, i)
       await ctx.db.insert('claims', claim)
       existingClaimNumbers.add(claim.claimNumber)
->>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
       inserted += 1
     }
 
-    let yellowInserted = 0
     for (let i = 0; i < 24; i += 1) {
       const claim = buildYellowRiskClaim(i)
       if (existingClaimNumbers.has(claim.claimNumber)) {
         skippedExisting += 1
         continue
       }
+      await ensureRelatedData(claim, 10_000 + i)
       await ctx.db.insert('claims', claim)
       existingClaimNumbers.add(claim.claimNumber)
       inserted += 1
@@ -900,32 +891,12 @@ export const seedSyntheticData = mutation({
 
     return {
       inserted,
-<<<<<<< HEAD
-      deleted,
-      message: 'Datos sinteticos ampliados con score ML, reglas y tablas complementarias.',
-=======
       skippedExisting,
       yellowInserted,
       message:
-        'Datos sinteticos cargados; los siniestros existentes se omitieron automaticamente.',
-    }
-  },
-})
-
-export const seedYellowRiskData = mutation({
-  args: { count: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const count = clamp(Math.floor(args.count ?? 12), 1, 200)
-    let inserted = 0
-    for (let i = 0; i < count; i += 1) {
-      await ctx.db.insert('claims', buildYellowRiskClaim(i))
-      inserted += 1
-    }
-    return {
-      inserted,
-      message:
-        'Casos amarillos cargados. Nivel medio: escalar a unidad antifraude para revision documental.',
->>>>>>> 603beeeb05aea23e06016bc5a12216decc4fcef8
+        shouldForce
+          ? 'Datos sinteticos cargados sin reemplazo; force activo solo mantiene compatibilidad.'
+          : 'Datos sinteticos cargados; los siniestros existentes se omitieron automaticamente.',
     }
   },
 })
@@ -972,6 +943,11 @@ export const importPublicClaims = mutation({
   },
   handler: async (ctx, args) => {
     const datasetName = args.datasetName?.trim() || 'public-dataset'
+    const existingClaims = await ctx.db.query('claims').collect()
+    const existingClaimNumbers = new Set(
+      existingClaims.map((claim) => claim.claimNumber),
+    )
+    const incomingClaimNumbers = new Set<string>()
     let inserted = 0
     let skipped = 0
     const errors: string[] = []
@@ -991,7 +967,23 @@ export const importPublicClaims = mutation({
         continue
       }
 
+      const claimNumber = normalized.claim.claimNumber
+      if (
+        existingClaimNumbers.has(claimNumber) ||
+        incomingClaimNumbers.has(claimNumber)
+      ) {
+        skipped += 1
+        if (errors.length < 8) {
+          errors.push(
+            `Fila ${i + 1}: siniestro duplicado (${claimNumber}), se omitio`,
+          )
+        }
+        continue
+      }
+
       await ctx.db.insert('claims', normalized.claim)
+      existingClaimNumbers.add(claimNumber)
+      incomingClaimNumbers.add(claimNumber)
       inserted += 1
     }
 

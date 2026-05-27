@@ -18,7 +18,7 @@ import {
 	ShieldCheck,
 	Upload,
 } from "lucide-react";
-import { type ComponentType, useMemo, useState } from "react";
+import { type ComponentType, useMemo, useRef, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
 import { type PayloadFormat, parsePayload } from "../lib/importPayload";
@@ -58,6 +58,12 @@ const quickQuestions = [
 	"documentos faltantes",
 	"resumen ejecutivo",
 ];
+
+const CSV_TEMPLATE_FILENAME = "plantilla_siniestros_publicos.csv";
+const CSV_TEMPLATE_CONTENT = `claim_id,policy_id,customer_id,claim_amount,estimated_damage_amount,claim_type,incidents_last_12_months,days_since_policy_start,region,report_channel,incident_date,description
+PUB-001,P-7782,CUST-9001,11250,6500,theft,2,45,Quito,callcenter,2026-04-29T23:14:00Z,Vehiculo sustraido en zona urbana.
+PUB-002,P-7783,CUST-9012,2400,2600,collision,0,390,Guayaquil,app,2026-04-10T16:00:00Z,Colision leve con danos de pintura.
+`;
 
 function riskLevelText(level: string) {
 	if (level === "red") return "Alto";
@@ -122,6 +128,9 @@ function Home() {
 	const [payloadFormat, setPayloadFormat] = useState<PayloadFormat>("json");
 	const [publicPayload, setPublicPayload] = useState("");
 	const [datasetName, setDatasetName] = useState("public-claims");
+	const [selectedCsvFileName, setSelectedCsvFileName] = useState<string | null>(
+		null,
+	);
 	const [importFeedback, setImportFeedback] = useState<{
 		inserted: number;
 		skipped: number;
@@ -129,6 +138,7 @@ function Home() {
 	} | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
 	const [isImporting, setIsImporting] = useState(false);
+	const csvFileInputRef = useRef<HTMLInputElement | null>(null);
 
 	const summary = useQuery(api.claims.getSummary, {});
 	const claims = useQuery(api.claims.listWithRisk, {
@@ -200,6 +210,45 @@ function Home() {
 		} finally {
 			setIsImporting(false);
 		}
+	};
+
+	const onPickCsvFile = () => {
+		csvFileInputRef.current?.click();
+	};
+
+	const onCsvFileSelected = async (
+		event: React.ChangeEvent<HTMLInputElement>,
+	) => {
+		const file = event.target.files?.[0];
+		if (!file) return;
+		try {
+			setImportError(null);
+			const content = await file.text();
+			setPayloadFormat("csv");
+			setPublicPayload(content);
+			setSelectedCsvFileName(file.name);
+			if (!datasetName.trim() || datasetName === "public-claims") {
+				setDatasetName(file.name.replace(/\.[^/.]+$/, ""));
+			}
+		} catch {
+			setImportError("No se pudo leer el archivo CSV seleccionado");
+		} finally {
+			event.target.value = "";
+		}
+	};
+
+	const onDownloadCsvTemplate = () => {
+		const blob = new Blob([CSV_TEMPLATE_CONTENT], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = CSV_TEMPLATE_FILENAME;
+		document.body.append(link);
+		link.click();
+		link.remove();
+		URL.revokeObjectURL(url);
 	};
 
 	const loadExamplePayload = () => {
@@ -480,6 +529,36 @@ function Home() {
 										<FileText aria-hidden size={16} />
 										Ejemplo
 									</button>
+								</div>
+								<div className="mt-3 flex flex-wrap items-center gap-2">
+									<input
+										accept=".csv,text/csv"
+										className="hidden"
+										onChange={onCsvFileSelected}
+										ref={csvFileInputRef}
+										type="file"
+									/>
+									<button
+										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium"
+										onClick={onPickCsvFile}
+										type="button"
+									>
+										<Upload aria-hidden size={16} />
+										Subir CSV desde computador
+									</button>
+									<button
+										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium"
+										onClick={onDownloadCsvTemplate}
+										type="button"
+									>
+										<Download aria-hidden size={16} />
+										Descargar plantilla CSV
+									</button>
+									{selectedCsvFileName ? (
+										<span className="text-xs text-slate-600">
+											Archivo cargado: {selectedCsvFileName}
+										</span>
+									) : null}
 								</div>
 
 								<textarea

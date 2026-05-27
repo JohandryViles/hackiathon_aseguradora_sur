@@ -572,7 +572,7 @@ function Sidebar() {
 					<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
 						<img
 							alt="Logo Aseguradora del Sur"
-							className="h-7 w-7 object-contain"
+							className="h-full w-full object-contain"
 							src="/Logo_aseguradora.png"
 						/>
 					</div>

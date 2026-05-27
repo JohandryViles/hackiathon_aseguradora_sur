@@ -251,10 +251,10 @@ function Home() {
 						<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
 							<div>
 								<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-									Reto Aseguradora del Sur
+									Aseguradora del Sur
 								</p>
 								<h1 className="text-2xl font-bold tracking-tight">
-									Detector IA de Posibles Fraudes en Siniestros
+									Deteccion de posibles fraudes en siniestros con IA
 								</h1>
 							</div>
 							<div className="flex flex-wrap items-center gap-2">

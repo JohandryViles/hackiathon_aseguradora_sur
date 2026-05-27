@@ -13,12 +13,14 @@ import {
 	FileText,
 	Gauge,
 	LayoutDashboard,
+	Moon,
 	Search,
 	Send,
 	ShieldCheck,
+	Sun,
 	Upload,
 } from "lucide-react";
-import { type ComponentType, useMemo, useRef, useState } from "react";
+import { type ComponentType, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
 import { type PayloadFormat, parsePayload } from "../lib/importPayload";
@@ -138,7 +140,20 @@ function Home() {
 	} | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
 	const [isImporting, setIsImporting] = useState(false);
+	const [isDarkMode, setIsDarkMode] = useState(false);
 	const csvFileInputRef = useRef<HTMLInputElement | null>(null);
+
+	useEffect(() => {
+		const storedTheme = window.localStorage.getItem("theme");
+		const prefersDark = window.matchMedia(
+			"(prefers-color-scheme: dark)",
+		).matches;
+		const initialIsDark = storedTheme
+			? storedTheme === "dark"
+			: prefersDark;
+		setIsDarkMode(initialIsDark);
+		document.documentElement.classList.toggle("dark", initialIsDark);
+	}, []);
 
 	const summary = useQuery(api.claims.getSummary, {});
 	const claims = useQuery(api.claims.listWithRisk, {
@@ -156,9 +171,12 @@ function Home() {
 
 	const riskPillStyles = useMemo(
 		() => ({
-			green: "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200",
-			yellow: "bg-amber-100 text-amber-800 ring-1 ring-amber-200",
-			red: "bg-rose-100 text-rose-800 ring-1 ring-rose-200",
+			green:
+				"bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:ring-emerald-500/30",
+			yellow:
+				"bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:ring-amber-500/30",
+			red:
+				"bg-rose-100 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:ring-rose-500/30",
 		}),
 		[],
 	);
@@ -251,6 +269,15 @@ function Home() {
 		URL.revokeObjectURL(url);
 	};
 
+	const toggleTheme = () => {
+		setIsDarkMode((prev) => {
+			const next = !prev;
+			document.documentElement.classList.toggle("dark", next);
+			window.localStorage.setItem("theme", next ? "dark" : "light");
+			return next;
+		});
+	};
+
 	const loadExamplePayload = () => {
 		setPayloadFormat("json");
 		setPublicPayload(`[
@@ -291,15 +318,15 @@ function Home() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 text-slate-950">
+		<div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100 dark:[background-image:radial-gradient(1200px_600px_at_10%_-10%,rgba(56,189,248,0.12),transparent),radial-gradient(1200px_600px_at_90%_10%,rgba(59,130,246,0.10),transparent)]">
 			<div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
 				<Sidebar />
 
 				<main className="min-w-0">
-					<div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-8">
+					<div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-8 dark:border-slate-800 dark:bg-slate-950/80">
 						<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
 							<div>
-								<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+								<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 									Aseguradora del Sur
 								</p>
 								<h1 className="text-2xl font-bold tracking-tight">
@@ -317,7 +344,7 @@ function Home() {
 									{isSeeding ? "Cargando..." : "Cargar datos de prueba"}
 								</button>
 								<button
-									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100"
+									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 									disabled={currentClaims.length === 0}
 									onClick={() => downloadCasesCsv(currentClaims)}
 									type="button"
@@ -325,15 +352,29 @@ function Home() {
 									<Download aria-hidden size={16} />
 									Exportar
 								</button>
+								<button
+									aria-label={
+										isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
+									}
+									className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+									onClick={toggleTheme}
+									type="button"
+								>
+									{isDarkMode ? (
+										<Sun aria-hidden size={18} />
+									) : (
+										<Moon aria-hidden size={18} />
+									)}
+								</button>
 							</div>
 						</div>
 					</div>
 
-					<div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
+					<div className="border-b border-slate-200 bg-white px-4 py-2 lg:hidden dark:border-slate-800 dark:bg-slate-950">
 						<nav className="flex gap-2 overflow-x-auto">
 							{navItems.map((item) => (
 								<a
-									className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+									className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-slate-50"
 									href={item.href}
 									key={item.href}
 								>
@@ -396,18 +437,18 @@ function Home() {
 									/>
 								</div>
 
-								<div className="rounded-lg border border-slate-200 bg-white p-4">
+								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 									<div className="flex items-center justify-between gap-3">
 										<div>
 											<h2 className="font-semibold">
 												Concentracion de alertas
 											</h2>
-											<p className="text-sm text-slate-600">
+											<p className="text-sm text-slate-600 dark:text-slate-300">
 												Top de proveedores, ciudades y coberturas con casos no
 												verdes.
 											</p>
 										</div>
-										<BarChart3 className="text-slate-400" size={20} />
+										<BarChart3 className="text-slate-400 dark:text-slate-500" size={20} />
 									</div>
 									<div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
 										<TopList
@@ -454,7 +495,7 @@ function Home() {
 									</div>
 								</div>
 
-								<div className="rounded-lg border border-slate-200 bg-white p-4">
+								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 									<h2 className="font-semibold">Modelo de datos demo</h2>
 									<div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
 										<InfoLine
@@ -493,17 +534,17 @@ function Home() {
 								title="Carga datos publicos o registros puntuados"
 								description="Acepta JSON o CSV con columnas del reto. Si incluye fraud_probability, el dashboard usa esa probabilidad como score ML."
 							/>
-							<div className="rounded-lg border border-slate-200 bg-white p-4">
+							<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 								<div className="grid gap-3 md:grid-cols-[220px_1fr_150px_auto]">
 									<input
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
 										onChange={(event) => setDatasetName(event.target.value)}
 										placeholder="Nombre dataset"
 										type="text"
 										value={datasetName}
 									/>
 									<select
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
 										onChange={(event) =>
 											setPayloadFormat(event.target.value as PayloadFormat)
 										}
@@ -522,7 +563,7 @@ function Home() {
 										{isImporting ? "Importando..." : "Importar"}
 									</button>
 									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium"
+										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
 										onClick={loadExamplePayload}
 										type="button"
 									>
@@ -539,7 +580,7 @@ function Home() {
 										type="file"
 									/>
 									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium"
+										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
 										onClick={onPickCsvFile}
 										type="button"
 									>
@@ -547,7 +588,7 @@ function Home() {
 										Subir CSV desde computador
 									</button>
 									<button
-										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium"
+										className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-950"
 										onClick={onDownloadCsvTemplate}
 										type="button"
 									>
@@ -555,14 +596,14 @@ function Home() {
 										Descargar plantilla CSV
 									</button>
 									{selectedCsvFileName ? (
-										<span className="text-xs text-slate-600">
+										<span className="text-xs text-slate-600 dark:text-slate-300">
 											Archivo cargado: {selectedCsvFileName}
 										</span>
 									) : null}
 								</div>
 
 								<textarea
-									className="mt-3 min-h-44 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs outline-none focus:border-slate-500 focus:bg-white"
+									className="mt-3 min-h-44 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs outline-none focus:border-slate-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:focus:bg-slate-900"
 									onChange={(event) => setPublicPayload(event.target.value)}
 									placeholder={
 										payloadFormat === "json"
@@ -576,7 +617,7 @@ function Home() {
 									<p className="mt-2 text-sm text-rose-700">{importError}</p>
 								) : null}
 								{importFeedback ? (
-									<div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
+									<div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100">
 										<p>
 											Importacion completada: {importFeedback.inserted}{" "}
 											insertados / {importFeedback.skipped} omitidos.
@@ -598,8 +639,8 @@ function Home() {
 								title="Casos priorizados"
 								description="Filtra, busca y exporta la cola de revision. Cada caso muestra score ML, score de reglas y explicacion."
 							/>
-							<div className="rounded-lg border border-slate-200 bg-white">
-								<div className="flex flex-col gap-3 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between">
+							<div className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
+								<div className="flex flex-col gap-3 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800">
 									<label className="relative min-w-64 flex-1">
 										<Search
 											aria-hidden
@@ -607,7 +648,7 @@ function Home() {
 											size={16}
 										/>
 										<input
-											className="h-10 w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500"
+											className="h-10 w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950"
 											onChange={(event) => setSearch(event.target.value)}
 											placeholder="Buscar claim, cliente, proveedor, tipo o ciudad"
 											type="text"
@@ -615,7 +656,7 @@ function Home() {
 										/>
 									</label>
 									<select
-										className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+										className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
 										onChange={(event) =>
 											setRiskFilter(event.target.value as RiskFilter)
 										}
@@ -629,7 +670,7 @@ function Home() {
 								</div>
 								<div className="overflow-x-auto">
 									<table className="min-w-full text-sm">
-										<thead className="bg-slate-100 text-left text-slate-600">
+										<thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-800 dark:text-slate-300">
 											<tr>
 												<th className="px-4 py-3 font-medium">Claim</th>
 												<th className="px-4 py-3 font-medium">Cliente</th>
@@ -645,7 +686,7 @@ function Home() {
 										<tbody>
 											{currentClaims.map((claim) => (
 												<tr
-													className="border-t border-slate-100 align-top hover:bg-slate-50"
+													className="border-t border-slate-100 align-top hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
 													key={claim._id}
 												>
 													<td className="px-4 py-3 font-medium">
@@ -670,7 +711,7 @@ function Home() {
 															{riskLevelText(claim.riskLevel)}
 														</span>
 													</td>
-													<td className="max-w-sm px-4 py-3 text-xs text-slate-700">
+													<td className="max-w-sm px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
 														{claim.anomalyFlags.length > 0
 															? claim.anomalyFlags.slice(0, 2).join(" | ")
 															: "Sin alertas relevantes"}
@@ -680,7 +721,7 @@ function Home() {
 											{claims && currentClaims.length === 0 ? (
 												<tr>
 													<td
-														className="px-4 py-10 text-center text-sm text-slate-600"
+														className="px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-300"
 														colSpan={9}
 													>
 														No hay resultados para el filtro actual.
@@ -701,10 +742,10 @@ function Home() {
 								description="Responde preguntas frecuentes sobre riesgo, proveedores, ciudades, documentos, clientes y resumen ejecutivo."
 							/>
 							<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-								<div className="rounded-lg border border-slate-200 bg-white p-4">
+								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 									<form className="space-y-3" onSubmit={onAsk}>
 										<input
-											className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
+											className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950"
 											onChange={(event) => setNlQuestion(event.target.value)}
 											placeholder="Ej: por que CLM-00001 fue marcado"
 											type="text"
@@ -721,7 +762,7 @@ function Home() {
 									<div className="mt-4 flex flex-wrap gap-2">
 										{quickQuestions.map((question) => (
 											<button
-												className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+												className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
 												key={question}
 												onClick={() => askQuickQuestion(question)}
 												type="button"
@@ -732,14 +773,14 @@ function Home() {
 									</div>
 								</div>
 
-								<div className="rounded-lg border border-slate-200 bg-white p-4">
+								<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 									<h2 className="font-semibold">Respuesta</h2>
 									{assistantResponse ? (
 										<div className="mt-3 space-y-3">
-											<p className="text-sm text-slate-800">
+											<p className="text-sm text-slate-800 dark:text-slate-200">
 												{assistantResponse.answer}
 											</p>
-											<div className="rounded-md bg-indigo-50 p-3 text-sm text-indigo-950">
+											<div className="rounded-md bg-indigo-50 p-3 text-sm text-indigo-950 dark:bg-indigo-900/40 dark:text-indigo-100">
 												<strong>Siguiente accion:</strong>{" "}
 												{assistantResponse.recommendedAction}
 											</div>
@@ -747,13 +788,13 @@ function Home() {
 												<ul className="grid gap-2 text-sm md:grid-cols-2">
 													{assistantResponse.claims.slice(0, 6).map((claim) => (
 														<li
-															className="rounded-md border border-slate-200 p-3"
+															className="rounded-md border border-slate-200 p-3 dark:border-slate-800"
 															key={claim._id}
 														>
 															<p className="font-semibold">
 																{claim.claimNumber}
 															</p>
-															<p className="text-xs text-slate-600">
+															<p className="text-xs text-slate-600 dark:text-slate-300">
 																Score {claim.riskScore} - {riskLevelText(claim.riskLevel)}
 															</p>
 														</li>
@@ -762,7 +803,7 @@ function Home() {
 											) : null}
 										</div>
 									) : (
-										<p className="mt-3 text-sm text-slate-600">
+										<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
 											Selecciona una pregunta rapida o escribe una consulta para
 											obtener casos relacionados.
 										</p>
@@ -779,22 +820,22 @@ function Home() {
 
 function Sidebar() {
 	return (
-		<aside className="hidden border-r border-slate-200 bg-white lg:block">
+		<aside className="hidden border-r border-slate-200 bg-white lg:block dark:border-slate-800 dark:bg-slate-950">
 			<div className="sticky top-0 flex h-screen flex-col p-5">
-				<div className="flex items-center gap-3 border-b border-slate-200 pb-5">
+				<div className="flex items-center gap-3 border-b border-slate-200 pb-5 dark:border-slate-800">
 					<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white">
 						<ShieldCheck aria-hidden size={20} />
 					</div>
 					<div>
 						<p className="text-sm font-bold">Aseguradora del Sur</p>
-						<p className="text-xs text-slate-500">Analisis de siniestros</p>
+						<p className="text-xs text-slate-500 dark:text-slate-400">Analisis de siniestros</p>
 					</div>
 				</div>
 
 				<nav className="mt-6 space-y-1">
 					{navItems.map((item) => (
 						<a
-							className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+							className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-slate-50"
 							href={item.href}
 							key={item.href}
 						>
@@ -804,12 +845,12 @@ function Sidebar() {
 					))}
 				</nav>
 
-				<div className="mt-auto rounded-lg border border-slate-200 bg-slate-50 p-4">
+				<div className="mt-auto rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
 					<div className="flex items-center gap-2 text-sm font-semibold">
 						<AlertTriangle aria-hidden className="text-amber-600" size={16} />
 						Importante
 					</div>
-					<p className="mt-2 text-xs leading-5 text-slate-600">
+					<p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
 						Detector de Posibles Fraudes en Siniestros usando Inteligencia Artificial
 					</p>
 				</div>
@@ -832,12 +873,12 @@ function SectionHeader({
 	return (
 		<div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
 			<div>
-				<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+				<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 					<Icon aria-hidden size={15} />
 					{kicker}
 				</div>
 				<h2 className="mt-1 text-xl font-bold tracking-tight">{title}</h2>
-				<p className="mt-1 max-w-3xl text-sm text-slate-600">{description}</p>
+				<p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">{description}</p>
 			</div>
 		</div>
 	);
@@ -855,12 +896,12 @@ function MetricCard({
 	money?: boolean;
 }) {
 	return (
-		<article className="rounded-lg border border-slate-200 bg-white p-4">
+		<article className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 			<div className="flex items-center justify-between gap-3">
-				<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+				<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 					{label}
 				</p>
-				<Icon aria-hidden className="text-slate-400" size={18} />
+				<Icon aria-hidden className="text-slate-400 dark:text-slate-500" size={18} />
 			</div>
 			<p className="mt-3 text-2xl font-bold">
 				{money ? "$" : ""}
@@ -895,8 +936,8 @@ function RiskCard({
 
 function InfoLine({ label, value }: { label: string; value: string | number }) {
 	return (
-		<div className="rounded-md bg-slate-50 p-3">
-			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+		<div className="rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 				{label}
 			</p>
 			<p className="mt-1 truncate font-semibold">
@@ -915,7 +956,7 @@ function TopList({
 }) {
 	return (
 		<div>
-			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 				{title}
 			</p>
 			<ul className="mt-2 space-y-1">
@@ -926,7 +967,7 @@ function TopList({
 					</li>
 				))}
 				{items.length === 0 ? (
-					<li className="text-slate-500">Sin datos</li>
+					<li className="text-slate-500 dark:text-slate-400">Sin datos</li>
 				) : null}
 			</ul>
 		</div>
@@ -935,11 +976,11 @@ function TopList({
 
 function Deliverable({ label, path }: { label: string; path: string }) {
 	return (
-		<div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4">
+		<div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 			<CheckCircle2 aria-hidden className="mt-0.5 text-emerald-600" size={18} />
 			<div className="min-w-0">
 				<p className="font-semibold">{label}</p>
-				<p className="mt-1 truncate font-mono text-xs text-slate-500">{path}</p>
+				<p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">{path}</p>
 			</div>
 		</div>
 	);

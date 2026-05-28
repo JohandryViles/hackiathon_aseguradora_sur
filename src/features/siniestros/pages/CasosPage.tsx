@@ -3,11 +3,13 @@ import { useQuery } from "convex/react";
 import { ArrowLeft, ClipboardList, Download, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { PriorityGroup } from "@/features/siniestros/components/PriorityGroup";
 import { api } from "@/shared/services/convexApi";
 import { exportClaimsCsv } from "@/shared/services/exportCsv";
 import { riskLevelText } from "@/shared/utils/riskLevelText";
+import { formatNumber } from "@/shared/utils/formatNumber";
 import { riskPillStyles } from "@/shared/constants/riskStyles";
-import type { ProcessedClaim, RiskFilter } from "@/shared/types/claims";
+import type { RiskFilter } from "@/shared/types/claims";
 
 export function CasosPage() {
 	const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
@@ -149,7 +151,7 @@ export function CasosPage() {
 											{claim.providerId ?? "-"}
 										</td>
 										<td className="px-4 py-3">
-											${claim.claimAmount.toLocaleString("en-US")}
+											${formatNumber(claim.claimAmount)}
 										</td>
 										<td className="px-4 py-3">{claim.mlScore ?? "-"}</td>
 										<td className="px-4 py-3">{claim.ruleRiskScore}</td>
@@ -182,61 +184,6 @@ export function CasosPage() {
 						</table>
 					</div>
 				</section>
-			</div>
-		</div>
-	);
-}
-
-function PriorityGroup({
-	claims,
-	color,
-	emptyText,
-	title,
-}: {
-	claims: ProcessedClaim[];
-	color: "red" | "yellow";
-	emptyText: string;
-	title: string;
-}) {
-	const styles = {
-		red: {
-			container:
-				"border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100",
-			row: "border-rose-200/80 dark:border-rose-900/60",
-		},
-		yellow: {
-			container:
-				"border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100",
-			row: "border-amber-200/80 dark:border-amber-900/60",
-		},
-	};
-
-	return (
-		<div className={`rounded-lg border p-4 ${styles[color].container}`}>
-			<h2 className="font-semibold">{title}</h2>
-			<div className="mt-3 divide-y text-sm">
-				{claims.map((claim) => (
-					<div className={`grid gap-2 py-3 ${styles[color].row}`} key={claim._id}>
-						<div className="flex items-start justify-between gap-3">
-							<div className="min-w-0">
-								<p className="truncate font-semibold">{claim.claimNumber}</p>
-								<p className="mt-0.5 text-xs opacity-80">
-									{claim.customerId} - {claim.providerId ?? "Sin proveedor"}
-								</p>
-							</div>
-							<div className="text-right">
-								<p className="font-bold">{claim.riskScore}</p>
-								<p className="text-xs opacity-80">score</p>
-							</div>
-						</div>
-						<p className="text-xs opacity-85">
-							{claim.anomalyFlags[0] ?? claim.recommendedAction}
-						</p>
-					</div>
-				))}
-				{claims.length === 0 ? (
-					<p className="py-4 text-sm opacity-80">{emptyText}</p>
-				) : null}
 			</div>
 		</div>
 	);

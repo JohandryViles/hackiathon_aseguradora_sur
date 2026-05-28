@@ -1,3 +1,5 @@
+import { formatNumber } from "@/shared/utils/formatNumber";
+
 type RiskCardProps = {
 	color: "red" | "yellow" | "green";
 	label: string;
@@ -17,7 +19,7 @@ export function RiskCard({ color, label, value }: RiskCardProps) {
 				{label}
 			</p>
 			<p className="mt-3 text-3xl font-bold">
-				{value.toLocaleString("en-US")}
+				{formatNumber(value)}
 			</p>
 		</article>
 	);

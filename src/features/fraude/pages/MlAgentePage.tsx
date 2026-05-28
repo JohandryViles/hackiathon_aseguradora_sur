@@ -5,13 +5,15 @@ import {
 	Bot,
 	Brain,
 	ClipboardList,
-	FileSearch,
 	Gauge,
 	MessageSquareText,
 	ShieldCheck,
 } from "lucide-react";
 
 import { api } from "@/shared/services/convexApi";
+import { FeatureCard } from "@/features/fraude/components/FeatureCard";
+import { InfoBox } from "@/features/fraude/components/InfoBox";
+import { QueryExample } from "@/features/fraude/components/QueryExample";
 
 export function MlAgentePage() {
 	const summary = useQuery(api.claims.getSummary, {});
@@ -115,48 +117,6 @@ export function MlAgentePage() {
 					</div>
 				</section>
 			</div>
-		</div>
-	);
-}
-
-function InfoBox({ label, value }: { label: string; value: string | number }) {
-	return (
-		<div className="rounded-md bg-slate-50 p-3 dark:bg-slate-950">
-			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-				{label}
-			</p>
-			<p className="mt-1 truncate font-semibold">
-				{value.toLocaleString("en-US")}
-			</p>
-		</div>
-	);
-}
-
-function FeatureCard({
-	icon: Icon,
-	title,
-	description,
-}: {
-	icon: typeof Brain;
-	title: string;
-	description: string;
-}) {
-	return (
-		<div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-			<Icon aria-hidden className="text-slate-500" size={20} />
-			<h2 className="mt-3 font-semibold">{title}</h2>
-			<p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-				{description}
-			</p>
-		</div>
-	);
-}
-
-function QueryExample({ text }: { text: string }) {
-	return (
-		<div className="flex items-center gap-2 rounded-md bg-slate-50 p-3 dark:bg-slate-950">
-			<FileSearch aria-hidden className="shrink-0 text-slate-500" size={16} />
-			<span>{text}</span>
 		</div>
 	);
 }

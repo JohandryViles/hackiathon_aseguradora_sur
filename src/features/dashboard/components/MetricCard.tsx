@@ -1,5 +1,7 @@
 import { type ComponentType } from "react";
 
+import { formatNumber } from "@/shared/utils/formatNumber";
+
 type IconComponent = ComponentType<{ className?: string; size?: number }>;
 
 type MetricCardProps = {
@@ -24,7 +26,7 @@ export function MetricCard({ icon: Icon, label, value, money }: MetricCardProps)
 			</div>
 			<p className="mt-3 text-2xl font-bold">
 				{money ? "$" : ""}
-				{value.toLocaleString("en-US")}
+				{formatNumber(value)}
 			</p>
 		</article>
 	);

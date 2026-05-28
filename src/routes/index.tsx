@@ -19,7 +19,10 @@ import { type ComponentType, useEffect, useState } from "react";
 
 import { api } from "../../convex/_generated/api";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+	component: Home,
+	errorComponent: FriendlyRouteError,
+});
 
 type IconComponent = ComponentType<{ className?: string; size?: number }>;
 
@@ -63,10 +66,42 @@ const quickQuestions = [
 ];
 
 function riskLevelText(level: string) {
-	if (level === "red") return "Alto";
-	if (level === "yellow") return "Medio";
-	if (level === "green") return "Bajo";
+	if (level === "red") return "Rojo Alto";
+	if (level === "yellow") return "Amarillo Medio";
+	if (level === "green") return "Verde Bajo";
 	return level;
+}
+
+function friendlyConvexError(error: unknown) {
+	const raw =
+		error instanceof Error ? error.message : "No fue posible conectar con Convex.";
+	if (raw.includes("Could not find public function")) {
+		return "El backend aun no termino de desplegar funciones. Ejecuta `npx convex dev --once` y recarga la pagina.";
+	}
+	if (raw.toLowerCase().includes("unauthorized")) {
+		return "No hay sesion activa para Convex. Ejecuta `npx convex dev` para autenticar y luego recarga.";
+	}
+	return raw;
+}
+
+function FriendlyRouteError({ error }: { error: unknown }) {
+	return (
+		<div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-6 py-10">
+			<div className="w-full rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+				<h2 className="text-xl font-semibold">No se pudo cargar el dashboard</h2>
+				<p className="mt-2 text-sm">
+					{friendlyConvexError(error)}
+				</p>
+				<button
+					className="mt-4 inline-flex h-10 items-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+					onClick={() => window.location.reload()}
+					type="button"
+				>
+					Reintentar
+				</button>
+			</div>
+		</div>
+	);
 }
 
 function escapeCsv(value: unknown) {
@@ -156,11 +191,7 @@ function Home() {
 			const response = await askAssistant({ question: trimmed });
 			setAssistantResponse(response);
 		} catch (error) {
-			setAssistantError(
-				error instanceof Error
-					? error.message
-					: "No fue posible consultar el agente.",
-			);
+			setAssistantError(friendlyConvexError(error));
 		} finally {
 			setAssistantLoading(false);
 		}

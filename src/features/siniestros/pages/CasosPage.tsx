@@ -117,9 +117,9 @@ export function CasosPage() {
 							value={riskFilter}
 						>
 							<option value="all">Todos los riesgos</option>
-							<option value="green">Verde Bajo</option>
-							<option value="yellow">Amarillo Medio</option>
-							<option value="red">Rojo Alto</option>
+							<option value="green">Bajo</option>
+							<option value="yellow">Medio</option>
+							<option value="red">Alto</option>
 						</select>
 					</div>
 					<div className="overflow-x-auto">

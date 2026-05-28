@@ -1,5 +1,5 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Link, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
 
@@ -34,7 +34,30 @@ export const Route = createRootRoute({
 		],
 	}),
 	shellComponent: RootDocument,
+	notFoundComponent: NotFound,
 });
+
+function NotFound() {
+	return (
+		<div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-6 py-10">
+			<div className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+				<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+					404
+				</p>
+				<h2 className="mt-2 text-2xl font-semibold">Ruta no encontrada</h2>
+				<p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+					La pagina que buscas no existe o fue movida.
+				</p>
+				<Link
+					className="mt-4 inline-flex h-10 items-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+					to="/"
+				>
+					Volver al dashboard
+				</Link>
+			</div>
+		</div>
+	);
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useEffect(() => {

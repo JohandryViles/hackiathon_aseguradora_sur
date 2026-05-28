@@ -1,20 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { Bot, Gauge } from "lucide-react";
+import { Bot } from "lucide-react";
 
 import { AssistantPanel } from "@/features/chat-ia/components/AssistantPanel";
 import { useAssistant } from "@/features/chat-ia/hooks/useAssistant";
 import { api } from "../../convex/_generated/api";
-import { AlertConcentrationCard } from "@/features/dashboard/components/AlertConcentrationCard";
-import { InfoLine } from "@/features/dashboard/components/InfoLine";
 import { quickQuestions } from "@/features/chat-ia/constants";
+import { DashboardOverview } from "@/features/dashboard/components/DashboardOverview";
+import { DataModelSection } from "@/features/dashboard/components/DataModelSection";
 import { RecentPrioritySection } from "@/features/dashboard/components/RecentPrioritySection";
-import { RiskCard } from "@/features/dashboard/components/RiskCard";
 import { SectionHeader } from "@/features/dashboard/components/SectionHeader";
-import { Sidebar, navItems } from "@/features/dashboard/components/Sidebar";
-import { SummaryMetrics } from "@/features/dashboard/components/SummaryMetrics";
+import { Sidebar } from "@/features/dashboard/components/Sidebar";
 import { TopBar } from "@/features/dashboard/components/TopBar";
 import { FriendlyRouteError } from "@/shared/components/FriendlyRouteError";
+import { navItems } from "@/shared/constants/navigation";
 import { useExportCsv } from "@/shared/hooks/useExportCsv";
 import { useTheme } from "@/shared/hooks/useTheme";
 import { riskLevelText } from "@/shared/utils/riskLevelText";
@@ -75,89 +74,32 @@ function Home() {
 					</div>
 
 					<div className="space-y-8 px-4 py-6 md:px-8">
-						<section className="space-y-4" id="resumen">
-							<SectionHeader
-								icon={Gauge}
-								kicker="Resumen operativo"
-								title="Prioriza casos para revision humana"
-								description="Score hibrido con modelo scikit-learn y reglas explicables. El resultado es una alerta, no una acusacion."
-							/>
-
-							<SummaryMetrics
-								total={summary?.total ?? 0}
-								averageRiskScore={summary?.averageRiskScore ?? 0}
-								averageMlRiskScore={summary?.averageMlRiskScore ?? 0}
-								estimatedSavingsOpportunity={summary?.estimatedSavingsOpportunity ?? 0}
-							/>
-
-							<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-								<div className="grid gap-4 md:grid-cols-3">
-									<RiskCard
-										color="red"
-										label="Rojo Alto"
-										value={summary?.byLevel?.red ?? 0}
-									/>
-									<RiskCard
-										color="yellow"
-										label="Amarillo Medio"
-										value={summary?.byLevel?.yellow ?? 0}
-									/>
-									<RiskCard
-										color="green"
-										label="Verde Bajo"
-										value={summary?.byLevel?.green ?? 0}
-									/>
-								</div>
-
-								<AlertConcentrationCard
-									providers={summary?.topProviders ?? []}
-									cities={summary?.topCities ?? []}
-									lines={summary?.topLines ?? []}
-								/>
-							</div>
-						</section>
+						<DashboardOverview
+							total={summary?.total ?? 0}
+							averageRiskScore={summary?.averageRiskScore ?? 0}
+							averageMlRiskScore={summary?.averageMlRiskScore ?? 0}
+							estimatedSavingsOpportunity={summary?.estimatedSavingsOpportunity ?? 0}
+							red={summary?.byLevel?.red ?? 0}
+							yellow={summary?.byLevel?.yellow ?? 0}
+							green={summary?.byLevel?.green ?? 0}
+							providers={summary?.topProviders ?? []}
+							cities={summary?.topCities ?? []}
+							lines={summary?.topLines ?? []}
+						/>
 
 						<RecentPrioritySection
 							recentRedClaims={recentRedClaims}
 							recentYellowClaims={recentYellowClaims}
 						/>
 
-						<section className="space-y-4" id="modelo">
-							<SectionHeader
-								icon={Gauge}
-								kicker="Datos demo"
-								title="Modelo de datos demo"
-								description="Conteo operativo de las tablas cargadas en Convex para alimentar el dashboard y las consultas."
-							/>
-							<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-								<div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
-									<InfoLine
-										label="Polizas"
-										value={summary?.dataModelCounts?.policies ?? 0}
-									/>
-									<InfoLine
-										label="Asegurados"
-										value={summary?.dataModelCounts?.insureds ?? 0}
-									/>
-									<InfoLine
-										label="Vehiculos"
-										value={summary?.dataModelCounts?.vehicles ?? 0}
-									/>
-									<InfoLine
-										label="Proveedores"
-										value={summary?.dataModelCounts?.providers ?? 0}
-									/>
-									<InfoLine
-										label="Documentos"
-										value={summary?.dataModelCounts?.documents ?? 0}
-									/>
-									<InfoLine
-										label="Publicos"
-										value={summary?.bySource?.public ?? 0}
-									/>
-								</div>
-							</div>
-						</section>
+						<DataModelSection
+							policies={summary?.dataModelCounts?.policies ?? 0}
+							insureds={summary?.dataModelCounts?.insureds ?? 0}
+							vehicles={summary?.dataModelCounts?.vehicles ?? 0}
+							providers={summary?.dataModelCounts?.providers ?? 0}
+							documents={summary?.dataModelCounts?.documents ?? 0}
+							publicCount={summary?.bySource?.public ?? 0}
+						/>
 
 						<section className="space-y-4" id="agente">
 							<SectionHeader

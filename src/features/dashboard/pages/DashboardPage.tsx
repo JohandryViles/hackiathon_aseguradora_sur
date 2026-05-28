@@ -22,13 +22,13 @@ export function DashboardPage() {
 		assistantLoading,
 		assistantError,
 		onAsk,
-		askQuickQuestion,
 	} = useAssistant();
 	const { isDarkMode, toggleTheme } = useTheme();
 	const { exportClaimsCsv } = useExportCsv();
 	const summary = useQuery(api.claims.getSummary, {});
 	const exportClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
 	const currentClaims = exportClaims ?? [];
+	const claimNumbers = [...new Set(currentClaims.map((claim) => claim.claimNumber))];
 	const recentRedClaims = currentClaims
 		.filter((claim) => claim.riskLevel === "red")
 		.slice(0, 5);
@@ -99,8 +99,8 @@ export function DashboardPage() {
 							nlQuestion={nlQuestion}
 							onAsk={onAsk}
 							onQuestionChange={setNlQuestion}
-							onQuickQuestion={askQuickQuestion}
 							quickQuestions={quickQuestions}
+							claimNumbers={claimNumbers}
 							riskLevelText={riskLevelText}
 						/>
 					</div>

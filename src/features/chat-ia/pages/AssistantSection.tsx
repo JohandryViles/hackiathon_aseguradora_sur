@@ -12,8 +12,8 @@ type AssistantSectionProps = {
 	assistantResponse: AssistantResponse | null;
 	onAsk: (event: FormEvent<HTMLFormElement>) => void;
 	onQuestionChange: (value: string) => void;
-	onQuickQuestion: (question: string) => void;
 	quickQuestions: string[];
+	claimNumbers: string[];
 	riskLevelText: (level: string) => string;
 };
 
@@ -24,8 +24,8 @@ export function AssistantSection({
 	assistantResponse,
 	onAsk,
 	onQuestionChange,
-	onQuickQuestion,
 	quickQuestions,
+	claimNumbers,
 	riskLevelText,
 }: AssistantSectionProps) {
 	return (
@@ -43,8 +43,8 @@ export function AssistantSection({
 				nlQuestion={nlQuestion}
 				onAsk={onAsk}
 				onQuestionChange={onQuestionChange}
-				onQuickQuestion={onQuickQuestion}
 				quickQuestions={quickQuestions}
+				claimNumbers={claimNumbers}
 				riskLevelText={riskLevelText}
 			/>
 		</section>

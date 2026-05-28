@@ -10,10 +10,18 @@ type AssistantPanelProps = {
 	assistantResponse: AssistantResponse | null;
 	onAsk: (event: FormEvent<HTMLFormElement>) => void;
 	onQuestionChange: (value: string) => void;
-	onQuickQuestion: (question: string) => void;
 	quickQuestions: string[];
+	claimNumbers: string[];
 	riskLevelText: (level: string) => string;
 };
+
+function normalizeText(value: string) {
+	return value
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.trim();
+}
 
 export function AssistantPanel({
 	nlQuestion,
@@ -22,10 +30,34 @@ export function AssistantPanel({
 	assistantResponse,
 	onAsk,
 	onQuestionChange,
-	onQuickQuestion,
 	quickQuestions,
+	claimNumbers,
 	riskLevelText,
 }: AssistantPanelProps) {
+	const normalizedQuery = normalizeText(nlQuestion);
+	const queryParts = normalizedQuery.split(/\s+/).filter(Boolean);
+	const relatedSuggestions =
+		queryParts.length === 0
+			? []
+			: quickQuestions
+					.filter((question) => {
+						const normalizedQuestion = normalizeText(question);
+						return (
+							normalizedQuestion !== normalizedQuery &&
+							queryParts.every((part) => normalizedQuestion.includes(part))
+						);
+					})
+					.slice(0, 5);
+	const claimSuggestions =
+		queryParts.length === 0
+			? []
+			: claimNumbers
+					.filter((claimNumber) => {
+						const normalizedClaimNumber = normalizeText(claimNumber);
+						return queryParts.every((part) => normalizedClaimNumber.includes(part));
+					})
+					.slice(0, 8);
+
 	return (
 		<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
 			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
@@ -37,6 +69,44 @@ export function AssistantPanel({
 						type="text"
 						value={nlQuestion}
 					/>
+					{relatedSuggestions.length > 0 ? (
+						<div className="rounded-md border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-900">
+							<p className="mb-1 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+								Sugerencias relacionadas
+							</p>
+							<div className="flex flex-wrap gap-2">
+								{relatedSuggestions.map((suggestion) => (
+									<button
+										className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-slate-800"
+										key={suggestion}
+										onClick={() => onQuestionChange(suggestion)}
+										type="button"
+									>
+										{suggestion}
+									</button>
+								))}
+							</div>
+						</div>
+					) : null}
+					{claimSuggestions.length > 0 ? (
+						<div className="rounded-md border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-900">
+							<p className="mb-1 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+								Siniestros existentes
+							</p>
+							<div className="flex flex-wrap gap-2">
+								{claimSuggestions.map((claimNumber) => (
+									<button
+										className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-300 dark:hover:bg-slate-800"
+										key={claimNumber}
+										onClick={() => onQuestionChange(claimNumber)}
+										type="button"
+									>
+										{claimNumber}
+									</button>
+								))}
+							</div>
+						</div>
+					) : null}
 					<button
 						className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-indigo-400"
 						disabled={assistantLoading || !nlQuestion.trim()}
@@ -46,18 +116,6 @@ export function AssistantPanel({
 						{assistantLoading ? "Consultando" : "Consultar"}
 					</button>
 				</form>
-				<div className="mt-4 flex flex-wrap gap-2">
-					{quickQuestions.map((question) => (
-						<button
-							className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-							key={question}
-							onClick={() => onQuickQuestion(question)}
-							type="button"
-						>
-							{question}
-						</button>
-					))}
-				</div>
 			</div>
 
 			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">

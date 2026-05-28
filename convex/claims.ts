@@ -104,6 +104,8 @@ type AnalystAssistantResponse = {
 }
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
+const DEFAULT_ML_MODEL_VERSION = 'sklearn-random-forest-v1'
+const IMPORT_ML_PROXY_VERSION = 'convex-import-ml-proxy-v1'
 const DEFAULT_ANALYST_SYSTEM_MESSAGE =
   'Eres un analista antifraude de seguros para Aseguradora del Sur. Responde en espanol, de forma clara y breve. Usa solo los datos entregados en el contexto. No acuses fraude como hecho confirmado; habla de posibles alertas, riesgo y pasos de revision humana. Devuelve recomendaciones accionables para el analista.'
 
@@ -142,6 +144,14 @@ function riskLevelLabel(level: RiskLevel) {
 function seedRandom(seed: number) {
   const x = Math.sin(seed * 9301 + 49297) * 233280
   return x - Math.floor(x)
+}
+
+function seedFromText(value: string) {
+  let seed = 0
+  for (let i = 0; i < value.length; i += 1) {
+    seed = (seed * 31 + value.charCodeAt(i)) % 100000
+  }
+  return seed
 }
 
 function pick<T>(seed: number, values: T[]): T {
@@ -301,7 +311,7 @@ function buildSyntheticClaim(index: number): ClaimInput {
     fraudLabelSimulated: mlFraudProbability >= 0.58 ? 1 : 0,
     mlFraudProbability,
     mlRiskScore: Math.round(mlFraudProbability * 100),
-    mlModelVersion: 'sklearn-random-forest-v1',
+    mlModelVersion: DEFAULT_ML_MODEL_VERSION,
   }
 }
 
@@ -558,6 +568,31 @@ function normalizePublicClaim(
     sourceDataset: datasetName,
   }
 
+  if (claim.mlFraudProbability !== undefined) {
+    const probability = claim.mlFraudProbability > 1 ? claim.mlFraudProbability / 100 : claim.mlFraudProbability
+    claim.mlFraudProbability = clamp(round(probability, 4), 0, 1)
+  }
+  if (claim.mlRiskScore !== undefined) {
+    claim.mlRiskScore = clamp(Math.round(claim.mlRiskScore), 0, 100)
+  }
+
+  if (claim.mlRiskScore === undefined && claim.mlFraudProbability === undefined) {
+    const probability = calculateSyntheticMlProbability(seedFromText(claim.claimNumber), claim)
+    claim.mlFraudProbability = probability
+    claim.mlRiskScore = Math.round(probability * 100)
+    claim.mlModelVersion = IMPORT_ML_PROXY_VERSION
+  } else {
+    if (claim.mlRiskScore === undefined && claim.mlFraudProbability !== undefined) {
+      claim.mlRiskScore = Math.round(claim.mlFraudProbability * 100)
+    }
+    if (claim.mlFraudProbability === undefined && claim.mlRiskScore !== undefined) {
+      claim.mlFraudProbability = round(claim.mlRiskScore / 100, 4)
+    }
+    if (claim.mlModelVersion === 'external-import') {
+      claim.mlModelVersion = DEFAULT_ML_MODEL_VERSION
+    }
+  }
+
   return { claim }
 }
 
@@ -721,7 +756,16 @@ function evaluateClaimRisk(claim: ClaimInput, duplicatesByCustomer: number, amou
       : typeof claim.mlFraudProbability === 'number'
         ? claim.mlFraudProbability * 100
         : null
-  const score = clamp(Math.round(mlScore === null ? ruleRisk.score : ruleRisk.score * 0.45 + mlScore * 0.55), 0, 100)
+  const importedMlProxyScore =
+    mlScore === null && claim.source === 'public'
+      ? Math.round(calculateSyntheticMlProbability(seedFromText(claim.claimNumber), claim) * 100)
+      : null
+  const effectiveMlScore = mlScore ?? importedMlProxyScore
+  const score = clamp(
+    Math.round(effectiveMlScore === null ? ruleRisk.score : ruleRisk.score * 0.45 + effectiveMlScore * 0.55),
+    0,
+    100,
+  )
   const level = riskLevelFromScore(score)
   const flags = [...ruleRisk.flags]
 
@@ -729,6 +773,10 @@ function evaluateClaimRisk(claim: ClaimInput, duplicatesByCustomer: number, amou
     flags.unshift('Modelo scikit-learn predice probabilidad alta de posible fraude')
   } else if (mlScore !== null && mlScore >= 41) {
     flags.unshift('Modelo scikit-learn predice riesgo medio')
+  } else if (importedMlProxyScore !== null && importedMlProxyScore >= 76) {
+    flags.unshift('Estimador ML proxy de importacion marca riesgo alto')
+  } else if (importedMlProxyScore !== null && importedMlProxyScore >= 41) {
+    flags.unshift('Estimador ML proxy de importacion marca riesgo medio')
   }
 
   const explanation =
@@ -745,7 +793,7 @@ function evaluateClaimRisk(claim: ClaimInput, duplicatesByCustomer: number, amou
   return {
     score,
     ruleScore: ruleRisk.score,
-    mlScore: mlScore === null ? null : Math.round(mlScore),
+    mlScore: effectiveMlScore === null ? null : Math.round(effectiveMlScore),
     level,
     flags,
     explanation,
@@ -1464,7 +1512,7 @@ export const getSummary = query({
         averageMlRiskScore: 0,
         byLevel: { green: 0, yellow: 0, red: 0 },
         bySource: { synthetic: 0, public: 0 },
-        modelVersion: 'sklearn-random-forest-v1',
+        modelVersion: DEFAULT_ML_MODEL_VERSION,
         dataModelCounts: { claims: 0, policies: 0, insureds: 0, vehicles: 0, providers: 0, documents: 0 },
         topAnomalies: [] as Array<{ flag: string; count: number }>,
         topProviders: [] as Array<{ label: string; count: number }>,
@@ -1499,6 +1547,9 @@ export const getSummary = query({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([flag, count]) => ({ flag, count }))
+    const modelVersion =
+      enriched.find((claim) => claim.mlScore !== null && claim.mlModelVersion && claim.mlModelVersion !== 'external-import')
+        ?.mlModelVersion ?? (mlCount > 0 ? IMPORT_ML_PROXY_VERSION : DEFAULT_ML_MODEL_VERSION)
 
     return {
       total: claims.length,
@@ -1506,7 +1557,7 @@ export const getSummary = query({
       averageMlRiskScore: mlCount > 0 ? Number((totalMlScore / mlCount).toFixed(1)) : 0,
       byLevel,
       bySource,
-      modelVersion: enriched.find((claim) => claim.mlModelVersion)?.mlModelVersion ?? 'sklearn-random-forest-v1',
+      modelVersion,
       dataModelCounts: {
         claims: claims.length,
         policies: policies.length,

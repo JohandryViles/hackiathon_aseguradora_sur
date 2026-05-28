@@ -1,6 +1,7 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { useEffect } from "react";
 
 import ConvexProvider from "../integrations/convex/provider";
 
@@ -36,6 +37,15 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	useEffect(() => {
+		const storedTheme = window.localStorage.getItem("theme");
+		const prefersDark = window.matchMedia(
+			"(prefers-color-scheme: dark)",
+		).matches;
+		const initialIsDark = storedTheme ? storedTheme === "dark" : prefersDark;
+		document.documentElement.classList.toggle("dark", initialIsDark);
+	}, []);
+
 	return (
 		<html lang="es">
 			<head>

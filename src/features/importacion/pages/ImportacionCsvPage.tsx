@@ -346,7 +346,6 @@ export function ImportacionCsvPage() {
 						<ImportCard
 							config={config}
 							key={config.key}
-							onImportFile={onImportFile}
 							onSelectFile={onSelectFile}
 							state={states[config.key]}
 							inputRef={(element) => {
@@ -436,7 +435,6 @@ export function ImportacionCsvPage() {
 type ImportCardProps = {
 	config: ImportConfig;
 	state: ImportState;
-	onImportFile: (key: ImportKey, file: File) => void;
 	onSelectFile: (key: ImportKey, event: ChangeEvent<HTMLInputElement>) => void;
 	inputRef: (element: HTMLInputElement | null) => void;
 	onTriggerFile: () => void;
@@ -446,7 +444,6 @@ type ImportCardProps = {
 function ImportCard({
 	config,
 	state,
-	onImportFile,
 	onSelectFile,
 	inputRef,
 	onTriggerFile,

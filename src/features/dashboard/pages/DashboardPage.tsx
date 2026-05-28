@@ -27,14 +27,24 @@ export function DashboardPage() {
 	const { exportClaimsCsv } = useExportCsv();
 	const summary = useQuery(api.claims.getSummary, {});
 	const exportClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
+	const redPriorityClaims = useQuery(api.claims.listWithRisk, {
+		riskLevel: "red",
+		limit: 5,
+	});
+	const yellowPriorityClaims = useQuery(api.claims.listWithRisk, {
+		riskLevel: "yellow",
+		limit: 5,
+	});
 	const currentClaims = exportClaims ?? [];
-	const claimNumbers = [...new Set(currentClaims.map((claim) => claim.claimNumber))];
-	const recentRedClaims = currentClaims
-		.filter((claim) => claim.riskLevel === "red")
-		.slice(0, 5);
-	const recentYellowClaims = currentClaims
-		.filter((claim) => claim.riskLevel === "yellow")
-		.slice(0, 5);
+	const recentRedClaims = redPriorityClaims ?? [];
+	const recentYellowClaims = yellowPriorityClaims ?? [];
+	const claimNumbers = [
+		...new Set(
+			[...currentClaims, ...recentRedClaims, ...recentYellowClaims].map(
+				(claim) => claim.claimNumber,
+			),
+		),
+	];
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100 dark:[background-image:radial-gradient(1200px_600px_at_10%_-10%,rgba(56,189,248,0.12),transparent),radial-gradient(1200px_600px_at_90%_10%,rgba(59,130,246,0.10),transparent)]">

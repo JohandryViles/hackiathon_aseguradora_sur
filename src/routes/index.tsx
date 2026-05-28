@@ -210,7 +210,7 @@ function Home() {
 									Importacion
 								</Link>
 								<button
-									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+									className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:disabled:border-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-200"
 									disabled={currentClaims.length === 0}
 									onClick={() => downloadCasesCsv(currentClaims)}
 									type="button"

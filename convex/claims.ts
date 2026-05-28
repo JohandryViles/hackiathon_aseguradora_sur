@@ -107,7 +107,7 @@ const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini'
 const DEFAULT_ML_MODEL_VERSION = 'sklearn-random-forest-v1'
 const IMPORT_ML_PROXY_VERSION = 'convex-import-ml-proxy-v1'
 const DEFAULT_ANALYST_SYSTEM_MESSAGE =
-  'Eres un analista antifraude de seguros para Aseguradora del Sur. Responde en espanol, de forma clara y breve. Usa solo los datos entregados en el contexto. No acuses fraude como hecho confirmado; habla de posibles alertas, riesgo y pasos de revision humana. Devuelve recomendaciones accionables para el analista.'
+  'Eres un agente antifraude de seguros para Aseguradora del Sur. Tu tarea es interpretar un enfoque hibrido ya calculado por el sistema: modelo supervisado scikit-learn o proxy ML en mlScore, reglas de negocio en ruleRiskScore y anomalyFlags, y score final en riskScore/riskLevel. No entrenas ni ejecutas scikit-learn; usas solo los scores y datos entregados en el contexto. Explica como se combinan ML y reglas, cita senales como monto, documentos, proveedor, vigencia, ciudad o narrativa cuando existan. No inventes datos ni acuses fraude confirmado; habla de posibles alertas y revision humana. Responde en espanol, claro y breve, con una accion recomendada para el analista.'
 
 const askAnalystAssistantQuery = makeFunctionReference<'query', { question: string }, AnalystAssistantResponse>(
   'claims:askAnalystAssistant',

@@ -113,6 +113,11 @@ const askAnalystAssistantQuery = makeFunctionReference<'query', { question: stri
 const getSummaryQuery = makeFunctionReference<'query', Record<string, never>, unknown>('claims:getSummary')
 const listWithRiskQuery = makeFunctionReference<'query', { limit: number }, EnrichedClaim[]>('claims:listWithRisk')
 
+function readEnvVar(name: string) {
+  const globalWithProcess = globalThis as { process?: { env?: Record<string, string | undefined> } }
+  return globalWithProcess.process?.env?.[name]
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
@@ -126,6 +131,12 @@ function riskLevelFromScore(score: number): RiskLevel {
   if (score >= 76) return 'red'
   if (score >= 41) return 'yellow'
   return 'green'
+}
+
+function riskLevelLabel(level: RiskLevel) {
+  if (level === 'red') return 'Rojo Alto'
+  if (level === 'yellow') return 'Amarillo Medio'
+  return 'Verde Bajo'
 }
 
 function seedRandom(seed: number) {
@@ -1535,7 +1546,7 @@ export const askAnalystAssistant = query({
       const claims = enriched.filter((claim) => claim.riskLevel === intent).slice(0, 10)
       return {
         intent,
-        answer: `Se encontraron ${claims.length} casos principales en nivel ${intent}.`,
+        answer: `Se encontraron ${claims.length} casos principales en nivel ${riskLevelLabel(intent)}.`,
         recommendedAction:
           intent === 'red'
             ? 'Revisar primero soportes, proveedor, documentos y consistencia narrativa.'
@@ -1550,7 +1561,7 @@ export const askAnalystAssistant = query({
       return {
         intent,
         answer: claim
-          ? `${claim.claimNumber} fue clasificado ${claim.riskLevel} con score ${claim.riskScore}. ${claim.explanation}`
+          ? `${claim.claimNumber} fue clasificado como ${riskLevelLabel(claim.riskLevel)} con score ${claim.riskScore}. ${claim.explanation}`
           : 'No encontre el siniestro solicitado.',
         recommendedAction: claim?.recommendedAction ?? 'Consulta sugerida: "por que CLM-00001 fue marcado".',
         claims: claim ? [claim] : [],
@@ -1650,9 +1661,10 @@ export const askAnalystAssistant = query({
     if (intent === 'summary') {
       const red = enriched.filter((claim) => claim.riskLevel === 'red')
       const yellow = enriched.filter((claim) => claim.riskLevel === 'yellow')
+      const green = enriched.filter((claim) => claim.riskLevel === 'green')
       return {
         intent,
-        answer: `Resumen ejecutivo: ${red.length} casos rojos y ${yellow.length} amarillos. Los principales factores son monto atipico, vigencia cercana, documentos y proveedor recurrente.`,
+        answer: `Resumen ejecutivo: ${red.length} casos en Rojo Alto, ${yellow.length} en Amarillo Medio y ${green.length} en Verde Bajo. Los principales factores son monto atipico, vigencia cercana, documentos y proveedor recurrente.`,
         recommendedAction: 'Revisar primero los 10 casos con mayor score combinado IA/reglas.',
         claims: enriched.slice(0, 10),
       }
@@ -1739,7 +1751,7 @@ export const askAnalystAssistantWithLLM = action({
     const question = args.question.trim()
     const localResponse = await ctx.runQuery(askAnalystAssistantQuery, { question })
 
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = readEnvVar('OPENAI_API_KEY')
     if (!apiKey) {
       return {
         ...localResponse,
@@ -1749,8 +1761,8 @@ export const askAnalystAssistantWithLLM = action({
       }
     }
 
-    const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL
-    const systemMessage = process.env.OPENAI_SYSTEM_MESSAGE || DEFAULT_ANALYST_SYSTEM_MESSAGE
+    const model = readEnvVar('OPENAI_MODEL') || DEFAULT_OPENAI_MODEL
+    const systemMessage = readEnvVar('OPENAI_SYSTEM_MESSAGE') || DEFAULT_ANALYST_SYSTEM_MESSAGE
     const [summary, claims] = await Promise.all([
       ctx.runQuery(getSummaryQuery, {}),
       ctx.runQuery(listWithRiskQuery, { limit: 40 }),

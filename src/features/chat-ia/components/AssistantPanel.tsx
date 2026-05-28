@@ -57,15 +57,22 @@ export function AssistantPanel({
 						return queryParts.every((part) => normalizedClaimNumber.includes(part));
 					})
 					.slice(0, 8);
+	const hasSuggestions =
+		relatedSuggestions.length > 0 || claimSuggestions.length > 0;
 
 	return (
 		<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
 			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 				<form className="space-y-3" onSubmit={onAsk}>
 					<input
-						className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950"
+						aria-autocomplete="list"
+						aria-expanded={hasSuggestions}
+						aria-label="Consulta para el agente"
+						autoComplete="off"
+						className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none placeholder:text-slate-500 focus:border-slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-slate-700 dark:bg-slate-950 dark:placeholder:text-slate-400"
 						onChange={(event) => onQuestionChange(event.target.value)}
 						placeholder="Ej: por que CLM-00001 fue marcado"
+						spellCheck={false}
 						type="text"
 						value={nlQuestion}
 					/>
@@ -74,12 +81,13 @@ export function AssistantPanel({
 							<p className="mb-1 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
 								Sugerencias relacionadas
 							</p>
-							<div className="flex flex-wrap gap-2">
+							<div className="flex flex-wrap gap-2" role="listbox">
 								{relatedSuggestions.map((suggestion) => (
 									<button
-										className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-slate-800"
+										className="inline-flex min-h-11 items-center rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-700 transition-colors duration-200 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 active:bg-indigo-100 dark:border-indigo-700 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-slate-800 dark:active:bg-slate-700"
 										key={suggestion}
 										onClick={() => onQuestionChange(suggestion)}
+										role="option"
 										type="button"
 									>
 										{suggestion}
@@ -93,12 +101,13 @@ export function AssistantPanel({
 							<p className="mb-1 px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
 								Siniestros existentes
 							</p>
-							<div className="flex flex-wrap gap-2">
+							<div className="flex flex-wrap gap-2" role="listbox">
 								{claimSuggestions.map((claimNumber) => (
 									<button
-										className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-300 dark:hover:bg-slate-800"
+										className="inline-flex min-h-11 items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-700 transition-colors duration-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 active:bg-emerald-100 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-300 dark:hover:bg-slate-800 dark:active:bg-slate-700"
 										key={claimNumber}
 										onClick={() => onQuestionChange(claimNumber)}
+										role="option"
 										type="button"
 									>
 										{claimNumber}
@@ -108,7 +117,7 @@ export function AssistantPanel({
 						</div>
 					) : null}
 					<button
-						className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-indigo-400"
+						className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 active:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-indigo-400 dark:disabled:bg-indigo-500/60"
 						disabled={assistantLoading || !nlQuestion.trim()}
 						type="submit"
 					>
@@ -118,7 +127,10 @@ export function AssistantPanel({
 				</form>
 			</div>
 
-			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+			<div
+				aria-live="polite"
+				className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80"
+			>
 				<h2 className="font-semibold">Respuesta</h2>
 				{assistantError ? (
 					<p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-100">
@@ -164,7 +176,7 @@ export function AssistantPanel({
 					</div>
 				) : !assistantLoading && !assistantError ? (
 					<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-						Selecciona una pregunta rapida o escribe una consulta para obtener casos relacionados.
+						Escribe una consulta para ver sugerencias y obtener casos relacionados.
 					</p>
 				) : null}
 			</div>

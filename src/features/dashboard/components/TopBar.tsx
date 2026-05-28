@@ -27,14 +27,14 @@ export function TopBar({
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
 					<Link
-						className="inline-flex h-10 items-center gap-2 rounded-md bg-black px-4 text-sm font-medium text-white hover:bg-slate-800"
+						className="inline-flex h-11 items-center gap-2 rounded-md bg-black px-4 text-sm font-medium text-white transition-colors duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-900"
 						to="/importacion_csv"
 					>
 						<Upload aria-hidden size={16} />
 						Importacion
 					</Link>
 					<button
-						className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:disabled:border-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-200"
+						className="inline-flex h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:active:bg-slate-600 dark:disabled:border-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-200"
 						disabled={!canExport}
 						onClick={onExport}
 						type="button"
@@ -46,7 +46,7 @@ export function TopBar({
 						aria-label={
 							isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
 						}
-						className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+						className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:active:bg-slate-700"
 						onClick={onToggleTheme}
 						type="button"
 					>

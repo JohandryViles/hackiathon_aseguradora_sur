@@ -58,7 +58,7 @@ Limitaciones iniciales:
 - README era de plantilla TanStack,
 - habia restos de plantilla,
 - no habia tests,
-- `bun --bun run test` fallaba por no encontrar tests,
+- `bun run test` fallaba por no encontrar tests,
 - `bunx --bun tsc --noEmit` fallaba por tipos derivados de `api as any`.
 
 ## Cambios implementados
@@ -203,15 +203,22 @@ providers
 claimDocuments
 ```
 
-El seed ahora genera 160 siniestros demo y tablas complementarias.
+El seed de backend sigue disponible para demos internas y genera siniestros
+sinteticos con tablas complementarias. La ruta visible para carga operativa es
+`/importacion_csv`, donde se importan CSV/JSON por tabla.
 
 Funciones principales:
 
 - `seedSyntheticData`
 - `listWithRisk`
 - `importPublicClaims`
+- `importPolicies`
+- `importInsureds`
+- `importProviders`
+- `importClaimDocuments`
 - `getSummary`
 - `askAnalystAssistant`
+- `askAnalystAssistantWithLLM`
 
 ### 5. Score hibrido
 
@@ -270,20 +277,27 @@ Ahora muestra:
 - score promedio,
 - score ML promedio,
 - ahorro simulado,
-- casos rojos,
-- casos amarillos,
-- documentos criticos faltantes,
-- version del modelo,
+- ultimos casos rojos por revisar,
+- ultimos casos amarillos por revisar,
 - conteo de polizas, proveedores y documentos,
 - ranking de proveedores,
 - ranking de ciudades,
 - ranking de coberturas,
-- tabla con score IA, score reglas y score final,
-- filtro por riesgo,
-- busqueda,
-- importacion JSON/CSV,
+- enlace a importacion CSV/JSON,
 - exportacion CSV del reporte,
-- agente de analisis.
+- agente de analisis con IA generativa opcional.
+
+La tabla completa con filtros y todos los casos procesados se movio a:
+
+```text
+src/routes/casos.tsx
+```
+
+La explicacion del enfoque ML + agente se movio a:
+
+```text
+src/routes/ML_AGENTE.tsx
+```
 
 Tambien se corrigio un error en runtime:
 
@@ -315,8 +329,19 @@ El agente responde preguntas como:
 - `cliente CUST-401`
 - `montos altos`
 
-No usa LLM externo. Es por intenciones y datos internos para mantener demo
-reproducible.
+Ahora hay dos capas:
+
+- `askAnalystAssistant`: query local por intenciones y datos internos.
+- `askAnalystAssistantWithLLM`: action de Convex que usa OpenAI si existe
+  `OPENAI_API_KEY`.
+
+Si la API key no esta configurada, la action devuelve automaticamente la
+respuesta local. La key se configura en Convex, no en React:
+
+```bash
+npx convex env set OPENAI_API_KEY "sk-..."
+npx convex env set OPENAI_MODEL "gpt-4.1-mini"
+```
 
 ### 9. Importacion
 
@@ -336,6 +361,22 @@ Soporta:
 
 - JSON,
 - CSV con comillas y separadores simples.
+
+La pantalla actual de importacion esta en:
+
+```text
+src/routes/importacion_csv.tsx
+```
+
+Importa por separado:
+
+- Siniestros -> `claims`
+- Polizas -> `policies`
+- Asegurados -> `insureds`
+- Beneficiarios -> `providers`
+- Documentos -> `claimDocuments`
+
+Tambien permite descargar plantillas CSV por tabla.
 
 ### 10. Documentacion agregada
 
@@ -472,31 +513,31 @@ python ml/train_fraud_model.py
 Levantar app:
 
 ```bash
-bun --bun run dev
+bun run dev
 ```
 
 Convex:
 
 ```bash
-bunx --bun convex dev
+npx convex dev
 ```
 
 Build:
 
 ```bash
-bun --bun run build
+bun run build
 ```
 
 Tests:
 
 ```bash
-bun --bun run test
+bun run test
 ```
 
 Check:
 
 ```bash
-bun --bun run check
+bun run check
 ```
 
 Typecheck:
@@ -510,10 +551,10 @@ bunx --bun tsc --noEmit
 Pasaron:
 
 ```text
-bun --bun run check
-bun --bun run test
+bun run check
+bun run test
 bunx --bun tsc --noEmit
-bun --bun run build
+bun run build
 ```
 
 Tambien se hizo verificacion HTTP local:
@@ -570,13 +611,13 @@ El archivo `.env` existe localmente pero esta ignorado por git.
 1. Ejecutar Convex:
 
 ```bash
-bunx --bun convex dev
+npx convex dev
 ```
 
 2. Ejecutar la app:
 
 ```bash
-bun --bun run dev
+bun run dev
 ```
 
 3. Abrir:
@@ -585,9 +626,12 @@ bun --bun run dev
 http://localhost:3000
 ```
 
-4. Click en `Regenerar demo`.
+4. Entrar a `Importacion`.
 
-5. Mostrar:
+5. Cargar CSV/JSON de siniestros, polizas, asegurados, beneficiarios y
+documentos, o descargar las plantillas para mostrar el formato esperado.
+
+6. Volver al dashboard y mostrar:
 
 - metricas,
 - score ML,
@@ -597,7 +641,7 @@ http://localhost:3000
 - casos rojos,
 - explicaciones.
 
-6. Preguntar al agente:
+7. Preguntar al agente:
 
 ```text
 10 casos de mayor riesgo
@@ -608,7 +652,7 @@ documentos faltantes
 resumen ejecutivo
 ```
 
-7. Exportar reporte CSV.
+8. Exportar reporte CSV.
 
 ## Puntos fuertes actuales
 
@@ -618,23 +662,28 @@ resumen ejecutivo
 - Ya hay dashboard funcional.
 - Ya hay score hibrido.
 - Ya hay reglas explicables.
-- Ya hay agente de consultas.
+- Ya hay agente de consultas con OpenAI opcional y fallback local.
+- Ya hay importacion CSV/JSON por tabla.
 - Ya hay docs de arquitectura, datos, reglas, IA y limitaciones.
 - Ya hay SQL de referencia.
-- Ya pasan build, tests, check y typecheck.
+- Ya pasan build, tests, lint y typecheck.
+- `bun run check` puede fallar por formato/CRLF de Biome si no se aplica
+  formatter.
 
 ## Pendientes recomendados
 
 Para mejorar aun mas antes de presentar:
 
-1. Correr `bunx --bun convex dev` para regenerar tipos de Convex si hace falta.
-2. Cargar demo con `Regenerar demo`.
+1. Correr `npx convex dev` para publicar funciones y regenerar tipos de Convex
+   si hace falta.
+2. Configurar `OPENAI_API_KEY` en Convex si se quiere usar IA generativa.
 3. Revisar visualmente el dashboard completo.
 4. Si el jurado insiste en NLP real, agregar TF-IDF/cosine similarity para
    narrativas.
 5. Si el jurado insiste en API Python, exponer el modelo con FastAPI.
 6. Quitar o ignorar `convex/todos.ts` si se quiere limpiar restos de plantilla.
-7. Preparar una presentacion PDF final basada en `presentation/pitch_outline.md`.
+7. Correr formatter Biome si se quiere dejar `bun run check` en verde.
+8. Preparar una presentacion PDF final basada en `presentation/pitch_outline.md`.
 
 ## Mensaje corto para explicar al jurado
 
@@ -642,6 +691,7 @@ FraudIA Claims es un prototipo funcional que prioriza siniestros con un score
 hibrido. Entrenamos un Random Forest con scikit-learn sobre datos sinteticos
 anonimizados, generamos probabilidad de posible fraude y la combinamos con
 reglas explicables del negocio asegurador. El dashboard permite revisar casos,
-entender las alertas, consultar por lenguaje natural y exportar reportes. La
-solucion no acusa fraude ni rechaza automaticamente; solo ayuda a que el
-analista humano revise primero los casos de mayor riesgo.
+entender las alertas, importar CSV/JSON por tabla, consultar por lenguaje
+natural con IA generativa opcional y exportar reportes. La solucion no acusa
+fraude ni rechaza automaticamente; solo ayuda a que el analista humano revise
+primero los casos de mayor riesgo.

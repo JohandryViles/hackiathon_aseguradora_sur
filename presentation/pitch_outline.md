@@ -13,27 +13,32 @@ FraudIA Claims prioriza siniestros con un score hibrido:
 - modelo entrenado con scikit-learn,
 - reglas explicables,
 - semaforo verde/amarillo/rojo,
-- agente de consultas para analistas.
+- importacion CSV/JSON por tabla,
+- agente de consultas con IA generativa opcional y fallback local.
 
 ## 4 min - Demo
 
-1. Regenerar dataset demo.
-2. Mostrar metricas: rojos, amarillos, score ML promedio.
-3. Filtrar casos rojos.
-4. Abrir explicacion de alertas en la tabla.
-5. Preguntar:
+1. Abrir el dashboard principal.
+2. Entrar a `Importacion`.
+3. Cargar o mostrar plantillas CSV/JSON de siniestros, polizas, asegurados,
+   beneficiarios y documentos.
+4. Volver al dashboard para mostrar metricas, score ML promedio y prioridades.
+5. Abrir `Casos` para ver todos los casos en verde, amarillo y rojo.
+6. Preguntar al agente:
    - `10 casos de mayor riesgo`
    - `por que CLM-00001 fue marcado`
    - `proveedores con mas alertas`
-6. Exportar reporte CSV.
+7. Exportar reporte CSV.
 
 ## 2 min - Arquitectura e IA
 
 - Python genera dataset sintetico.
 - scikit-learn entrena RandomForestClassifier.
-- Convex calcula reglas y score final.
-- React muestra dashboard y agente.
+- Convex guarda datos, calcula reglas y score final.
+- React muestra dashboard, importacion, casos y agente.
 - El score final mezcla 55% ML y 45% reglas.
+- El agente usa OpenAI si existe `OPENAI_API_KEY`; si no, usa respuestas
+  locales por reglas.
 
 ## 1 min - Impacto
 
@@ -47,8 +52,8 @@ FraudIA Claims prioriza siniestros con un score hibrido:
 - Datos sinteticos.
 - No acusa fraude.
 - Requiere validacion con historicos reales.
-- Siguiente etapa: NLP real, feedback de analistas y despliegue de API de
-  scoring.
+- Siguiente etapa: similitud textual real, feedback de analistas, versionado de
+  prompts/modelos y API de scoring.
 
 ## Preguntas esperadas
 
@@ -67,3 +72,9 @@ revision humana obligatoria antes de cualquier decision.
 
 RandomForestClassifier con variables de montos, fechas, documentos,
 proveedores, historial, vehiculo, conductor y narrativa.
+
+### Donde esta la IA generativa?
+
+En Convex existe `askAnalystAssistantWithLLM`, una action que lee
+`OPENAI_API_KEY` desde variables seguras de Convex. El frontend nunca recibe la
+API key. Si la key no existe, el agente responde con logica local.

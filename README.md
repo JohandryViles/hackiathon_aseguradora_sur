@@ -1,28 +1,30 @@
 # FraudIA Claims - Reto Aseguradora del Sur
 
-Prototipo funcional para detectar posibles fraudes en siniestros usando un
-enfoque hibrido:
+Prototipo funcional para detectar y priorizar posibles alertas de fraude en
+siniestros usando un enfoque hibrido:
 
 - modelo supervisado con scikit-learn,
 - reglas de negocio explicables,
 - dashboard web para analistas,
-- agente de consultas en lenguaje natural basado en intenciones,
+- importacion CSV/JSON por tabla,
+- agente de consultas en lenguaje natural con IA generativa opcional,
 - datos sinteticos anonimizados para demo.
 
-La solucion genera alertas de revision humana. No acusa fraude, no rechaza
+La solucion genera alertas para revision humana. No acusa fraude, no rechaza
 siniestros y no toma decisiones automaticas de pago.
 
 ## Stack
 
 - Frontend: React, TanStack Start, TanStack Router, Tailwind CSS.
-- Backend/demo data: Convex.
-- Modelo IA: Python, pandas, scikit-learn, RandomForestClassifier.
+- Backend y persistencia: Convex.
+- Modelo ML: Python, pandas, scikit-learn, RandomForestClassifier.
 - Persistencia del modelo: joblib.
+- Agente IA: Convex action con OpenAI opcional y fallback local por reglas.
 
 ## Estructura principal
 
 ```text
-convex/                  Funciones, schema y scoring hibrido
+convex/                  Funciones, schema, scoring hibrido e IA
 data/synthetic/          Dataset sintetico de entrenamiento
 data/processed/          Dataset puntuado por el modelo
 docs/                    Arquitectura, datos, reglas, IA y limitaciones
@@ -64,15 +66,17 @@ Salidas generadas:
 
 Metricas actuales con dataset sintetico:
 
+- accuracy: 0.9700
 - precision: 0.9306
 - recall: 0.9853
 - F1-score: 0.9571
 - ROC-AUC: 0.9980
+- matriz de confusion: `[[127, 5], [1, 67]]`
 
 Estas metricas son de una etiqueta simulada y deben validarse con datos
 historicos reales antes de uso productivo.
 
-## Ejecutar la aplicacion
+## Configurar Convex
 
 Configurar variables en `.env` o `.env.local`:
 
@@ -81,11 +85,49 @@ CONVEX_DEPLOYMENT=
 VITE_CONVEX_URL=
 ```
 
-Levantar Convex y la app:
+Levantar o publicar funciones Convex:
 
 ```bash
-bunx --bun convex dev
-bun --bun run dev
+npx convex dev
+```
+
+Para publicar una vez y salir:
+
+```bash
+npx convex dev --once
+```
+
+## Configurar OpenAI para el agente
+
+La API key no debe ir en React ni en variables `VITE_`. Debe configurarse como
+variable segura de Convex:
+
+```bash
+npx convex env set OPENAI_API_KEY "sk-..."
+npx convex env set OPENAI_MODEL "gpt-4.1-mini"
+```
+
+Opcionalmente se puede ajustar el system message:
+
+```bash
+npx convex env set OPENAI_SYSTEM_MESSAGE "Eres un analista antifraude de seguros..."
+```
+
+Si `OPENAI_API_KEY` no esta configurada, el dashboard sigue funcionando con el
+agente local basado en reglas e intenciones.
+
+## Ejecutar la aplicacion
+
+En una terminal:
+
+```bash
+npx convex dev
+```
+
+En otra terminal:
+
+```bash
+bun run dev
 ```
 
 La app corre en:
@@ -94,20 +136,51 @@ La app corre en:
 http://localhost:3000
 ```
 
+## Rutas principales
+
+- `/`: dashboard principal.
+- `/importacion_csv`: carga CSV/JSON por tabla.
+- `/casos`: todos los casos procesados con filtro y exportacion.
+- `/ML_AGENTE`: explicacion del enfoque ML + agente.
+
+## Importacion de datos
+
+La pantalla `/importacion_csv` permite cargar:
+
+- Siniestros -> `claims`
+- Polizas -> `policies`
+- Asegurados -> `insureds`
+- Beneficiarios -> `providers`
+- Documentos -> `claimDocuments`
+
+Cada importador valida campos minimos, omite filas invalidas, evita duplicados y
+devuelve:
+
+- `inserted`
+- `skipped`
+- `totalReceived`
+- `errors`
+- `message`
+
+Tambien se pueden descargar plantillas CSV desde la interfaz.
+
 ## Demo sugerida
 
-1. Abrir el dashboard.
-2. Click en `Regenerar demo` para cargar siniestros, polizas, asegurados,
-   vehiculos, proveedores y documentos sinteticos.
-3. Revisar la bandeja de casos priorizados.
-4. Filtrar por riesgo rojo.
-5. Preguntar al agente:
+1. Ejecutar `npx convex dev`.
+2. Ejecutar `bun run dev`.
+3. Abrir `http://localhost:3000`.
+4. Entrar a `Importacion`.
+5. Cargar CSV/JSON de siniestros, polizas, asegurados, beneficiarios y documentos.
+6. Revisar el dashboard principal: resumen, semaforo y ultimos casos por revisar.
+7. Abrir `Casos` para ver todos los casos procesados.
+8. Preguntar al agente:
    - `10 casos de mayor riesgo`
    - `por que CLM-00001 fue marcado`
    - `proveedores con mas alertas`
    - `ciudades con mayor concentracion`
-   - `documentos faltantes en casos criticos`
-6. Exportar el reporte CSV.
+   - `documentos faltantes`
+   - `resumen ejecutivo`
+9. Exportar el reporte CSV.
 
 ## Entregables cubiertos
 
@@ -127,10 +200,15 @@ http://localhost:3000
 ## Scripts utiles
 
 ```bash
-bun --bun run dev
-bun --bun run build
-bun --bun run test
-bun --bun run check
+bun run dev
+bun run build
+bun run test
+bun run lint
+bun run check
 python ml/generate_synthetic_claims.py
 python ml/train_fraud_model.py
 ```
+
+Nota: `bun run check` puede fallar si los archivos estan con finales CRLF o si
+Biome necesita ordenar imports/formato. `bun run lint`, `bun run test`,
+`bunx --bun tsc --noEmit` y `bun run build` pasan en el estado actual.

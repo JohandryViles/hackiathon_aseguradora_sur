@@ -2,23 +2,30 @@
 
 ## Objetivo
 
-Este prototipo implementa un flujo de analitica explicable para apoyar a analistas de seguros en:
+Este prototipo implementa un flujo de analitica explicable para apoyar a
+analistas de seguros en:
 
 - deteccion de patrones atipicos o posibles senales de fraude,
 - asignacion de score de riesgo por siniestro,
 - clasificacion operativa en verde, amarillo y rojo,
-- consulta guiada en lenguaje natural para priorizacion.
+- consulta guiada en lenguaje natural,
+- importacion de datos por tabla desde CSV/JSON.
 
 ## Fuente de datos
 
 - **Tabla principal:** `claims` en Convex.
-- **Carga de datos:** `seedSyntheticData` genera 120 siniestros sinteticos reproducibles.
-- **Carga de datos publicos:** `importPublicClaims` permite importar lotes JSON/CSV (parseados desde la UI) y etiquetarlos por `sourceDataset`.
-- **Atributos incluidos:** monto reclamado, dano estimado, historial del cliente, tiempo desde inicio de poliza, canal, tipo de siniestro, region, antiguedad del vehiculo y narrativa corta.
+- **Tablas relacionadas:** `policies`, `insureds`, `vehicles`, `providers`,
+  `claimDocuments`.
+- **Carga desde UI:** `/importacion_csv` permite cargar CSV/JSON por tabla.
+- **Carga sintetica backend:** `seedSyntheticData` sigue disponible para demos
+  internas o pruebas desde Convex.
+- **Atributos incluidos:** monto reclamado, dano estimado, historial del
+  cliente, tiempo desde inicio/fin de poliza, canal, tipo de siniestro, region,
+  documentos, proveedor y narrativa corta.
 
 ## Modelo de riesgo hibrido
 
-El prototipo ahora incluye un modelo supervisado entrenado con scikit-learn:
+El prototipo incluye un modelo supervisado entrenado con scikit-learn:
 
 - script de generacion: `ml/generate_synthetic_claims.py`,
 - script de entrenamiento: `ml/train_fraud_model.py`,
@@ -32,59 +39,61 @@ importado no trae score ML, el sistema usa solo reglas.
 
 ## Reglas explicables
 
-La evaluacion se hace por reglas con puntaje acumulado y tope [0, 100]:
+La evaluacion se hace por reglas con puntaje acumulado y tope [0, 100].
+Algunas senales implementadas:
 
-1. Ratio monto reclamado vs dano estimado (inflado).
+1. Ratio monto reclamado vs dano estimado.
 2. Frecuencia de siniestros recientes.
-3. Siniestro temprano despues de activar poliza.
-4. Reporte nocturno por call center.
-5. Monto alto en vehiculo antiguo.
-6. Tipo de siniestro hurto.
-7. Multiples casos para el mismo cliente.
-8. Monto atipico respecto al percentil 90.
+3. Siniestro cerca del inicio o fin de vigencia.
+4. Reporte tardio o demora en denuncia de robo.
+5. Proveedor recurrente o en lista restrictiva simulada.
+6. Documentos incompletos o inconsistentes.
+7. Narrativa similar a otros reclamos.
+8. Monto cercano a suma asegurada.
+9. Reporte nocturno por call center.
+10. Monto alto en vehiculo antiguo.
 
-Cada regla activada se devuelve como **alerta explicable** en `anomalyFlags`.
+Cada regla activada se devuelve como alerta explicable en `anomalyFlags`.
 
 ## Clasificacion
 
-- **Verde:** score < 40
-- **Amarillo:** score entre 40 y 69
-- **Rojo:** score >= 70
+- **Verde Bajo:** score 0-40
+- **Amarillo Medio:** score 41-75
+- **Rojo Alto:** score 76-100
 
 ## Consultas en lenguaje natural
 
-`askAnalystAssistant` interpreta consultas por intencion:
+El sistema tiene dos niveles:
 
-- riesgo alto/rojo/fraude,
-- riesgo amarillo o verde,
-- patrones anomales,
-- montos altos,
-- busqueda por cliente (`CUST-xxx`).
+- `askAnalystAssistant`: interpretacion local por intenciones.
+- `askAnalystAssistantWithLLM`: action con OpenAI si `OPENAI_API_KEY` esta
+  configurada.
 
-No usa un LLM externo: es una capa de interpretacion por reglas para mantener trazabilidad.
+Si OpenAI no esta configurado o responde con error, la action devuelve el
+resultado local para que la demo siga funcionando.
 
-## Interfaz (dashboard)
+## Interfaz
 
-La ruta principal incluye:
+Rutas principales:
 
-- carga de datos sinteticos,
-- filtros por nivel de riesgo y busqueda textual,
-- resumen de metricas y top anomalias,
-- tabla de casos con score y alertas,
-- panel de consultas en lenguaje natural.
+- `/`: dashboard con resumen, semaforo, prioridades y agente.
+- `/importacion_csv`: importacion CSV/JSON y descarga de plantillas.
+- `/casos`: bandeja completa de casos procesados.
+- `/ML_AGENTE`: explicacion del enfoque ML + reglas + agente.
 
 ## Limitaciones
 
 1. Datos sinteticos, no validados contra historicos reales.
 2. La etiqueta de fraude es simulada y debe validarse con historicos reales.
 3. Umbrales estaticos, no calibrados por negocio por linea de producto.
-4. NLP basado en intenciones simples; no entiende preguntas complejas.
-5. No reemplaza decision humana: sirve para priorizacion y apoyo.
+4. La similitud narrativa aun es simulada.
+5. El LLM ayuda a explicar y sintetizar, pero no decide ni acusa fraude.
+6. No reemplaza decision humana: sirve para priorizacion y apoyo.
 
 ## Proximos pasos recomendados
 
-1. Incorporar datos historicos etiquetados (fraude/no fraude).
+1. Incorporar datos historicos etiquetados.
 2. Calibrar umbrales con precision/recall y costo operacional.
 3. Agregar feedback de analistas para mejora continua.
-4. Evolucionar a modelo hibrido: reglas + modelo supervisado.
-5. Medir drift por region, canal, tipo de siniestro y temporada.
+4. Calcular similitud real con embeddings o TF-IDF/cosine similarity.
+5. Versionar modelos, prompts y evaluaciones.

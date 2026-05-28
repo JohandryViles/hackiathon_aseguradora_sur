@@ -1,7 +1,7 @@
 import { useAction } from "convex/react";
 import { type FormEvent, useState } from "react";
 
-import { api } from "../../../../convex/_generated/api";
+import { api } from "@/shared/services/convexApi";
 import type { AssistantResponse } from "@/features/chat-ia/types";
 import { friendlyConvexError } from "@/shared/utils/friendlyConvexError";
 

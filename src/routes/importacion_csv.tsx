@@ -3,6 +3,7 @@ import { useMutation } from "convex/react";
 import {
 	ArrowLeft,
 	Building2,
+	Download,
 	FileCheck2,
 	FileSpreadsheet,
 	FileText,
@@ -48,6 +49,57 @@ type ImportConfig = {
 	icon: ComponentType<{ className?: string; size?: number }>;
 	requiredColumns: string[];
 };
+
+const templateRows: Record<ImportKey, string[]> = {
+	claims: ["SIN-1001", "POL-2001", "CUST-3001", "5200"],
+	policies: [
+		"POL-2001",
+		"CUST-3001",
+		"vehicles",
+		"2026-01-01",
+		"2027-01-01",
+		"850",
+		"25000",
+		"500",
+		"broker",
+		"Quito",
+		"Activa",
+	],
+	insureds: ["CUST-3001", "Retail", "24", "Quito", "2", "1", "false", "710"],
+	providers: ["PROV-501", "Taller", "Quito", "12", "4300", "0.18", "60"],
+	documents: [
+		"DOC-8001",
+		"SIN-1001",
+		"denuncia",
+		"true",
+		"true",
+		"2026-04-30T09:00:00Z",
+		"false",
+		"Documento valido",
+	],
+};
+
+function escapeCsvCell(value: string) {
+	if (/[",\n]/.test(value)) return `"${value.replaceAll('"', '""')}"`;
+	return value;
+}
+
+function downloadTemplate(config: ImportConfig) {
+	const headers = config.requiredColumns;
+	const sample = templateRows[config.key] ?? headers.map(() => "");
+	const csv = `${headers.map(escapeCsvCell).join(",")}\n${sample
+		.map(escapeCsvCell)
+		.join(",")}\n`;
+	const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = `plantilla_${config.tableName}.csv`;
+	document.body.append(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(url);
+}
 
 const importConfigs: ImportConfig[] = [
 	{
@@ -392,15 +444,25 @@ function ImportCard({
 					</div>
 					<h2 className="mt-1 text-lg font-bold">{config.title}</h2>
 				</div>
-				<button
-					className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950"
-					disabled={state.loading}
-					onClick={() => inputRef.current?.click()}
-					type="button"
-				>
-					<Upload aria-hidden size={16} />
-					{state.loading ? "Importando" : "CSV"}
-				</button>
+				<div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+					<button
+						className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950"
+						disabled={state.loading}
+						onClick={() => inputRef.current?.click()}
+						type="button"
+					>
+						<Upload aria-hidden size={16} />
+						{state.loading ? "Importando" : "CSV"}
+					</button>
+					<button
+						className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+						onClick={() => downloadTemplate(config)}
+						type="button"
+					>
+						<Download aria-hidden size={16} />
+						Plantilla
+					</button>
+				</div>
 			</div>
 
 			<input

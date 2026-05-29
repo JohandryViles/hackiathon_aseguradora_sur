@@ -5,6 +5,8 @@
 
 :root {
   color-scheme: light;
+  --ease-out-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-ui: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 .dark {
@@ -23,5 +25,315 @@ body,
 
 body {
   margin: 0;
+}
+
+@keyframes ui-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ui-enter {
+  animation: ui-enter-up 220ms var(--ease-out-ui) both;
+  animation-delay: var(--ui-enter-delay, 0ms);
+}
+
+@keyframes ui-progress-sheen {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes ui-progress-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+
+.ui-progress-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(226 232 240);
+}
+
+.dark .ui-progress-track {
+  background: rgb(30 41 59);
+}
+
+.ui-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 260ms var(--ease-out-ui);
+  background-image: linear-gradient(
+    90deg,
+    rgb(15 23 42) 0%,
+    rgb(30 41 59) 35%,
+    rgb(15 23 42) 70%,
+    rgb(15 23 42) 100%
+  );
+  background-size: 220% 100%;
+  animation: ui-progress-sheen 1.8s linear infinite;
+}
+
+.dark .ui-progress-fill {
+  background-image: linear-gradient(
+    90deg,
+    rgb(226 232 240) 0%,
+    rgb(248 250 252) 35%,
+    rgb(226 232 240) 70%,
+    rgb(226 232 240) 100%
+  );
+}
+
+.ui-progress-indeterminate {
+  position: relative;
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(99 102 241) 0%, rgb(79 70 229) 100%);
+  animation: ui-progress-sweep 900ms var(--ease-in-out-ui) infinite;
+}
+
+.dark .ui-progress-indeterminate {
+  background: linear-gradient(90deg, rgb(165 180 252) 0%, rgb(129 140 248) 100%);
+}
+
+.ui-surface {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: rgb(255 255 255 / 1);
+  box-shadow: 0 1px 2px rgb(148 163 184 / 0.2);
+  transition:
+    transform 200ms var(--ease-out-ui),
+    box-shadow 200ms var(--ease-out-ui);
+}
+
+.ui-surface-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgb(148 163 184 / 0.22);
+}
+
+.dark .ui-surface {
+  border-color: rgb(30 41 59 / 1);
+  background: rgb(15 23 42 / 0.85);
+  box-shadow: 0 2px 10px rgb(2 6 23 / 0.35);
+}
+
+.dark .ui-surface-hover:hover {
+  box-shadow: 0 10px 22px rgb(2 6 23 / 0.45);
+}
+
+.ui-btn-primary {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: rgb(15 23 42);
+  padding: 0 1rem;
+  color: rgb(255 255 255);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    transform 160ms var(--ease-out-ui),
+    background-color 200ms var(--ease-out-ui);
+}
+
+.ui-btn-primary:hover {
+  background: rgb(30 41 59);
+}
+
+.ui-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.ui-btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(100 116 139 / 0.35);
+}
+
+.ui-btn-primary:disabled {
+  cursor: not-allowed;
+  background: rgb(148 163 184);
+}
+
+.dark .ui-btn-primary {
+  background: rgb(241 245 249);
+  color: rgb(15 23 42);
+}
+
+.dark .ui-btn-primary:hover {
+  background: rgb(226 232 240);
+}
+
+.dark .ui-btn-primary:disabled {
+  background: rgb(71 85 105);
+  color: rgb(226 232 240);
+}
+
+.ui-btn-secondary {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(203 213 225);
+  background: rgb(255 255 255);
+  padding: 0 1rem;
+  color: rgb(51 65 85);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    transform 160ms var(--ease-out-ui),
+    background-color 200ms var(--ease-out-ui);
+}
+
+.ui-btn-secondary:hover {
+  background: rgb(241 245 249);
+}
+
+.ui-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.ui-btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(100 116 139 / 0.35);
+}
+
+.ui-btn-secondary:disabled {
+  cursor: not-allowed;
+  background: rgb(241 245 249);
+  color: rgb(148 163 184);
+}
+
+.dark .ui-btn-secondary {
+  border-color: rgb(51 65 85);
+  background: rgb(15 23 42);
+  color: rgb(226 232 240);
+}
+
+.dark .ui-btn-secondary:hover {
+  background: rgb(30 41 59);
+}
+
+.dark .ui-btn-secondary:disabled {
+  border-color: rgb(71 85 105);
+  background: rgb(30 41 59);
+  color: rgb(148 163 184);
+}
+
+.ui-btn-brand {
+  background: rgb(67 56 202);
+  color: rgb(255 255 255);
+}
+
+.ui-btn-brand:hover {
+  background: rgb(79 70 229);
+}
+
+.ui-btn-brand:active {
+  background: rgb(55 48 163);
+}
+
+.ui-btn-brand:disabled {
+  background: rgb(129 140 248);
+}
+
+.dark .ui-btn-brand {
+  background: rgb(129 140 248);
+  color: rgb(15 23 42);
+}
+
+.dark .ui-btn-brand:hover {
+  background: rgb(165 180 252);
+}
+
+.dark .ui-btn-brand:active {
+  background: rgb(99 102 241);
+}
+
+.dark .ui-btn-brand:disabled {
+  background: rgb(79 70 229 / 0.65);
+  color: rgb(224 231 255);
+}
+
+.ui-field {
+  min-height: 2.5rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(203 213 225);
+  background: rgb(255 255 255);
+  padding: 0.5rem 0.75rem;
+  color: rgb(15 23 42);
+  font-size: 0.875rem;
+  transition:
+    border-color 180ms var(--ease-out-ui),
+    box-shadow 180ms var(--ease-out-ui);
+}
+
+.ui-field::placeholder {
+  color: rgb(100 116 139);
+}
+
+.ui-field:focus {
+  border-color: rgb(100 116 139);
+  outline: none;
+}
+
+.ui-field:focus-visible {
+  box-shadow: 0 0 0 2px rgb(99 102 241 / 0.25);
+}
+
+.dark .ui-field {
+  border-color: rgb(51 65 85);
+  background: rgb(2 6 23);
+  color: rgb(241 245 249);
+}
+
+.dark .ui-field::placeholder {
+  color: rgb(148 163 184);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-enter {
+    animation: none;
+  }
+
+  .ui-progress-fill,
+  .ui-progress-indeterminate {
+    animation: none;
+  }
+
+  .ui-progress-fill {
+    transition-duration: 0ms;
+  }
+
+  .ui-surface,
+  .ui-btn-primary,
+  .ui-btn-secondary,
+  .ui-field {
+    transition-duration: 0ms;
+  }
+
+  .ui-surface-hover:hover,
+  .ui-btn-primary:active,
+  .ui-btn-secondary:active {
+    transform: none;
+  }
 }
 

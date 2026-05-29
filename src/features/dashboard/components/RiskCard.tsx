@@ -17,7 +17,7 @@ export function RiskCard({ color, label, value }: RiskCardProps) {
 
 	return (
 		<article
-			className={`rounded-xl border p-4 transition-shadow duration-200 hover:shadow-md ${styles[color]}`}
+			className={`rounded-xl border p-4 transition-[transform,box-shadow] duration-200 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-md ${styles[color]}`}
 		>
 			<p className="text-xs font-semibold uppercase tracking-wide">
 				{label}

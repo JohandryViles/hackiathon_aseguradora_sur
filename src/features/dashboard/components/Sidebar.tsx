@@ -35,7 +35,7 @@ export function Sidebar() {
 					))}
 				</nav>
 
-				<div className="mt-auto rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+				<div className="ui-surface mt-auto p-4">
 					<div className="flex items-center gap-2 text-sm font-semibold">
 						<AlertTriangle aria-hidden className="text-amber-600" size={16} />
 						Importante

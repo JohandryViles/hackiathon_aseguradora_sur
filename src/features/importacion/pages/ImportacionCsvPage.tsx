@@ -375,14 +375,14 @@ export function ImportacionCsvPage() {
 		<div className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-5 md:px-8 md:py-6 dark:bg-slate-950 dark:text-slate-100">
 			<div className="mx-auto max-w-6xl space-y-6">
 				<Link
-					className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+					className="ui-btn-secondary px-3"
 					to="/"
 				>
 					<ArrowLeft aria-hidden size={16} />
 					Volver
 				</Link>
 
-				<header className="border-b border-slate-200 pb-5 dark:border-slate-800">
+				<header className="ui-enter border-b border-slate-200 pb-5 dark:border-slate-800">
 					<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 						<FileSpreadsheet aria-hidden size={15} />
 						Importacion
@@ -396,7 +396,7 @@ export function ImportacionCsvPage() {
 					</p>
 				</header>
 
-				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+				<div className="ui-enter grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{importConfigs.map((config) => (
 						<ImportCard
 							config={config}
@@ -412,8 +412,8 @@ export function ImportacionCsvPage() {
 					))}
 				</div>
 
-				<section className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
-					<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<section className="ui-enter ui-surface ui-surface-hover p-5">
+					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 						<div>
 							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 								<FileText aria-hidden size={15} />
@@ -425,9 +425,9 @@ export function ImportacionCsvPage() {
 								guardarlo en Convex con las mismas validaciones.
 							</p>
 						</div>
-						<div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+						<div className="grid grid-cols-1 gap-2 sm:ml-auto sm:flex sm:flex-row sm:items-center sm:justify-end">
 							<select
-								className="h-10 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+								className="ui-field min-w-0 sm:w-[170px] md:w-[190px] lg:w-[210px] sm:shrink-0"
 								onChange={(event) =>
 									setJsonImportKey(event.target.value as ImportKey)
 								}
@@ -440,7 +440,7 @@ export function ImportacionCsvPage() {
 								))}
 							</select>
 							<button
-								className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950"
+								className="ui-btn-primary h-10 px-4 sm:shrink-0"
 								disabled={jsonState.loading}
 								onClick={onImportJson}
 								type="button"
@@ -452,7 +452,7 @@ export function ImportacionCsvPage() {
 					</div>
 
 					<textarea
-						className="mt-4 min-h-44 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs outline-none focus:border-slate-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:focus:bg-slate-900"
+						className="ui-field mt-4 min-h-44 bg-slate-50 p-3 font-mono text-xs dark:bg-slate-950"
 						onChange={(event) => setJsonPayload(event.target.value)}
 						placeholder='[{"claim_id":"PUB-001","policy_id":"POL-1","customer_id":"CUST-1","claim_amount":1200}]'
 						value={jsonPayload}
@@ -512,7 +512,7 @@ function ImportCard({
 			: "Elegir CSV";
 
 	return (
-		<div className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
+		<div className="ui-surface ui-surface-hover min-w-0 p-4">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
 					<Icon aria-hidden className="text-slate-500" size={18} />
@@ -527,7 +527,7 @@ function ImportCard({
 
 			<div className="mt-4 grid grid-cols-2 gap-2">
 				<button
-					className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-900"
+					className="ui-btn-primary min-h-9 px-3 text-xs"
 					disabled={state.loading}
 					onClick={onTriggerFile}
 					type="button"
@@ -536,7 +536,7 @@ function ImportCard({
 					{buttonLabel}
 				</button>
 				<button
-					className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+					className="ui-btn-secondary min-h-9 px-3 text-xs"
 					onClick={onDownloadTemplate}
 					type="button"
 				>

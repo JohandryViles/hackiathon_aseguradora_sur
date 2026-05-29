@@ -59,13 +59,13 @@ export function AssistantPanel({
 					.slice(0, 8);
 	return (
 		<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-			<div className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
+			<div className="ui-surface ui-surface-hover min-w-0 p-4">
 				<form className="space-y-3" onSubmit={onAsk}>
 					<input
 						aria-autocomplete="list"
 						aria-label="Consulta para el agente"
 						autoComplete="off"
-						className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none placeholder:text-slate-500 focus:border-slate-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-slate-700 dark:bg-slate-950 dark:placeholder:text-slate-400"
+						className="ui-field h-11 px-3"
 						onChange={(event) => onQuestionChange(event.target.value)}
 						placeholder="Ej: por que CLM-00001 fue marcado"
 						spellCheck={false}
@@ -113,7 +113,7 @@ export function AssistantPanel({
 						</div>
 					) : null}
 					<button
-						className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-indigo-700 px-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 active:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-indigo-400 dark:disabled:bg-indigo-500/60"
+						className="ui-btn-primary ui-btn-brand h-11 w-full px-3 text-sm font-medium disabled:bg-indigo-400 dark:disabled:bg-indigo-500/60"
 						disabled={assistantLoading || !nlQuestion.trim()}
 						type="submit"
 					>
@@ -125,7 +125,7 @@ export function AssistantPanel({
 
 			<div
 				aria-live="polite"
-				className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35"
+				className="ui-surface ui-surface-hover min-w-0 p-4"
 			>
 				<h2 className="font-semibold">Respuesta</h2>
 				{assistantError ? (

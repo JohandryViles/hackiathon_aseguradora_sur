@@ -26,15 +26,12 @@ export function TopBar({
 					</h1>
 				</div>
 				<div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 sm:flex sm:flex-wrap">
-					<Link
-						className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-black px-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-900 sm:px-4"
-						to="/importacion_csv"
-					>
+					<Link className="ui-btn-primary px-3 sm:px-4" to="/importacion_csv">
 						<Upload aria-hidden size={16} />
 						Importacion
 					</Link>
 					<button
-						className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 sm:px-4 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:active:bg-slate-600 dark:disabled:border-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-200"
+						className="ui-btn-secondary px-3 sm:px-4"
 						disabled={!canExport}
 						onClick={onExport}
 						type="button"
@@ -46,7 +43,7 @@ export function TopBar({
 						aria-label={
 							isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
 						}
-						className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 active:bg-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:active:bg-slate-700"
+						className="ui-btn-secondary h-11 w-11 p-0"
 						onClick={onToggleTheme}
 						type="button"
 					>

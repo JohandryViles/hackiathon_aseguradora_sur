@@ -298,7 +298,7 @@ export function CasosPage() {
 			<div className="mx-auto max-w-7xl space-y-6">
 				<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 					<Link
-						className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+						className="ui-btn-secondary px-3"
 						to="/"
 					>
 						<ArrowLeft aria-hidden size={16} />
@@ -306,7 +306,7 @@ export function CasosPage() {
 					</Link>
 					<div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
 						<button
-							className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+							className="ui-btn-primary px-4"
 							disabled={
 								currentClaims.length === 0 || aiRun.status === "running"
 							}
@@ -324,7 +324,7 @@ export function CasosPage() {
 								: "Analizar visibles con IA"}
 						</button>
 						<button
-							className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+							className="ui-btn-secondary px-4"
 							disabled={processedClaims.length === 0}
 							onClick={() => exportClaimsCsv(processedClaims)}
 							type="button"
@@ -335,7 +335,7 @@ export function CasosPage() {
 					</div>
 				</div>
 
-				<header className="border-b border-slate-200 pb-5 dark:border-slate-800">
+				<header className="ui-enter border-b border-slate-200 pb-5 dark:border-slate-800">
 					<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 						<ClipboardList aria-hidden size={15} />
 						Bandeja antifraude
@@ -349,7 +349,7 @@ export function CasosPage() {
 					</p>
 				</header>
 
-				<div className="grid gap-4 xl:grid-cols-2">
+				<div className="ui-enter grid gap-4 xl:grid-cols-2">
 					<PriorityGroup
 						claims={topRedClaims}
 						color="red"
@@ -364,7 +364,7 @@ export function CasosPage() {
 					/>
 				</div>
 
-				<section className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
+				<section className="ui-enter ui-surface rounded-lg">
 					<div className="flex flex-col gap-3 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800">
 						<label className="relative min-w-0 flex-1">
 							<Search
@@ -373,7 +373,7 @@ export function CasosPage() {
 								size={16}
 							/>
 							<input
-								className="h-10 w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950"
+								className="ui-field py-2 pl-9 pr-3"
 								onChange={(event) => setSearch(event.target.value)}
 								placeholder="Buscar claim, cliente, proveedor, tipo o ciudad"
 								type="text"
@@ -381,7 +381,7 @@ export function CasosPage() {
 							/>
 						</label>
 						<select
-							className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm sm:w-auto dark:border-slate-700 dark:bg-slate-950"
+							className="ui-field w-full sm:w-auto"
 							onChange={(event) =>
 								setRiskFilter(event.target.value as RiskFilter)
 							}
@@ -423,15 +423,15 @@ export function CasosPage() {
 											{aiRun.processed}/{aiRun.total}
 										</span>
 									</div>
-									<div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+									<div className="ui-progress-track mt-2 h-2">
 										<div
-											className="h-full rounded-full bg-slate-950 transition-all duration-500 ease-out dark:bg-slate-100"
+											className="ui-progress-fill"
 											style={{ width: `${analysisProgress}%` }}
 										/>
 									</div>
 									{aiRun.status === "running" ? (
-										<div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-											<div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500 dark:bg-indigo-300" />
+										<div className="ui-progress-track mt-2 h-1">
+											<div className="ui-progress-indeterminate" />
 										</div>
 									) : null}
 								</div>

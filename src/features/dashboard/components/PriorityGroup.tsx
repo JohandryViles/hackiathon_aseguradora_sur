@@ -41,7 +41,7 @@ export function PriorityGroup({
 
 	return (
 		<div
-			className={`min-w-0 rounded-xl border p-4 transition-shadow duration-200 hover:shadow-md ${styles[color].container}`}
+			className={`min-w-0 rounded-xl border p-4 transition-[transform,box-shadow] duration-200 ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-md ${styles[color].container}`}
 		>
 			<h3 className="font-semibold">{title}</h3>
 			<div className="mt-3 divide-y text-sm">

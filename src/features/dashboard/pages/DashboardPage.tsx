@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { useEffect } from "react";
+import { type CSSProperties, useEffect } from "react";
 
 import { AssistantSection } from "@/features/chat-ia/pages/AssistantSection";
 import { useAssistant } from "@/features/chat-ia/hooks/useAssistant";
@@ -46,6 +46,8 @@ export function DashboardPage() {
 			),
 		),
 	];
+	const enterStyle = (delayMs: number) =>
+		({ "--ui-enter-delay": `${delayMs}ms` }) as CSSProperties;
 
 	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
@@ -82,44 +84,52 @@ export function DashboardPage() {
 					</div>
 
 					<div className="space-y-8 px-4 py-5 sm:px-5 md:px-8 md:py-6">
-						<DashboardOverview
-							total={summary?.total ?? 0}
-							averageRiskScore={summary?.averageRiskScore ?? 0}
-							averageMlRiskScore={summary?.averageMlRiskScore ?? 0}
-							estimatedSavingsOpportunity={summary?.estimatedSavingsOpportunity ?? 0}
-							red={summary?.byLevel?.red ?? 0}
-							yellow={summary?.byLevel?.yellow ?? 0}
-							green={summary?.byLevel?.green ?? 0}
-							providers={summary?.topProviders ?? []}
-							cities={summary?.topCities ?? []}
-							lines={summary?.topLines ?? []}
-						/>
+						<div className="ui-enter" style={enterStyle(0)}>
+							<DashboardOverview
+								total={summary?.total ?? 0}
+								averageRiskScore={summary?.averageRiskScore ?? 0}
+								averageMlRiskScore={summary?.averageMlRiskScore ?? 0}
+								estimatedSavingsOpportunity={summary?.estimatedSavingsOpportunity ?? 0}
+								red={summary?.byLevel?.red ?? 0}
+								yellow={summary?.byLevel?.yellow ?? 0}
+								green={summary?.byLevel?.green ?? 0}
+								providers={summary?.topProviders ?? []}
+								cities={summary?.topCities ?? []}
+								lines={summary?.topLines ?? []}
+							/>
+						</div>
 
-						<RecentPrioritySection
-							recentRedClaims={recentRedClaims}
-							recentYellowClaims={recentYellowClaims}
-						/>
+						<div className="ui-enter" style={enterStyle(40)}>
+							<RecentPrioritySection
+								recentRedClaims={recentRedClaims}
+								recentYellowClaims={recentYellowClaims}
+							/>
+						</div>
 
-						<DataModelSection
-							policies={summary?.dataModelCounts?.policies ?? 0}
-							insureds={summary?.dataModelCounts?.insureds ?? 0}
-							vehicles={summary?.dataModelCounts?.vehicles ?? 0}
-							providers={summary?.dataModelCounts?.providers ?? 0}
-							documents={summary?.dataModelCounts?.documents ?? 0}
-							publicCount={summary?.bySource?.public ?? 0}
-						/>
+						<div className="ui-enter" style={enterStyle(80)}>
+							<DataModelSection
+								policies={summary?.dataModelCounts?.policies ?? 0}
+								insureds={summary?.dataModelCounts?.insureds ?? 0}
+								vehicles={summary?.dataModelCounts?.vehicles ?? 0}
+								providers={summary?.dataModelCounts?.providers ?? 0}
+								documents={summary?.dataModelCounts?.documents ?? 0}
+								publicCount={summary?.bySource?.public ?? 0}
+							/>
+						</div>
 
-						<AssistantSection
-							assistantError={assistantError}
-							assistantLoading={assistantLoading}
-							assistantResponse={assistantResponse}
-							nlQuestion={nlQuestion}
-							onAsk={onAsk}
-							onQuestionChange={setNlQuestion}
-							quickQuestions={quickQuestions}
-							claimNumbers={claimNumbers}
-							riskLevelText={riskLevelText}
-						/>
+						<div className="ui-enter" style={enterStyle(120)}>
+							<AssistantSection
+								assistantError={assistantError}
+								assistantLoading={assistantLoading}
+								assistantResponse={assistantResponse}
+								nlQuestion={nlQuestion}
+								onAsk={onAsk}
+								onQuestionChange={setNlQuestion}
+								quickQuestions={quickQuestions}
+								claimNumbers={claimNumbers}
+								riskLevelText={riskLevelText}
+							/>
+						</div>
 					</div>
 				</main>
 			</div>

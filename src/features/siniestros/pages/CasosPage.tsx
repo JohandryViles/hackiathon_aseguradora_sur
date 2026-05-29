@@ -35,6 +35,8 @@ type AiRunState = {
 	error?: string;
 };
 
+const HUMAN_REVIEW_STORAGE_KEY = "aseguradora-sur-human-reviewed-claims-v1";
+
 function riskLevelFromAnalysis(nivel?: string): "green" | "yellow" | "red" {
 	if (nivel === "Rojo") return "red";
 	if (nivel === "Amarillo") return "yellow";
@@ -44,6 +46,37 @@ function riskLevelFromAnalysis(nivel?: string): "green" | "yellow" | "red" {
 function normalizeRiskLevel(value?: string): "green" | "yellow" | "red" {
 	if (value === "red" || value === "yellow" || value === "green") return value;
 	return "green";
+}
+
+function reviewStatusText({
+	hasAiResult,
+	hasAiError,
+	humanReviewed,
+}: {
+	hasAiResult: boolean;
+	hasAiError: boolean;
+	humanReviewed: boolean;
+}) {
+	if (hasAiResult && humanReviewed) return "IA + humano";
+	if (humanReviewed) return "Revisado humano";
+	if (hasAiResult) return "Revisado IA";
+	if (hasAiError) return "Error IA";
+	return "Pendiente IA";
+}
+
+function loadHumanReviewedClaims() {
+	if (typeof window === "undefined") return {};
+	try {
+		const raw = window.localStorage.getItem(HUMAN_REVIEW_STORAGE_KEY);
+		return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+	} catch {
+		return {};
+	}
+}
+
+function saveHumanReviewedClaims(value: Record<string, boolean>) {
+	if (typeof window === "undefined") return;
+	window.localStorage.setItem(HUMAN_REVIEW_STORAGE_KEY, JSON.stringify(value));
 }
 
 export function CasosPage() {
@@ -61,12 +94,16 @@ export function CasosPage() {
 	const [aiErrorsByClaim, setAiErrorsByClaim] = useState<
 		Record<string, string>
 	>({});
+	const [humanReviewedByClaim, setHumanReviewedByClaim] = useState<
+		Record<string, boolean>
+	>({});
 	const [selectedClaim, setSelectedClaim] = useState<ClaimForAnalysis | null>(
 		null,
 	);
 
 	useEffect(() => {
 		setAiResultsByClaim(loadStoredAiAnalysisResults());
+		setHumanReviewedByClaim(loadHumanReviewedClaims());
 		setAiResultsLoaded(true);
 	}, []);
 
@@ -74,6 +111,11 @@ export function CasosPage() {
 		if (!aiResultsLoaded) return;
 		saveStoredAiAnalysisResults(aiResultsByClaim);
 	}, [aiResultsByClaim, aiResultsLoaded]);
+
+	useEffect(() => {
+		if (!aiResultsLoaded) return;
+		saveHumanReviewedClaims(humanReviewedByClaim);
+	}, [humanReviewedByClaim, aiResultsLoaded]);
 
 	const allClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
 	const tableClaims = useQuery(api.claims.listWithRisk, {
@@ -163,6 +205,12 @@ export function CasosPage() {
 	};
 
 	const onReviewClaim = (claimNumber: string) => {
+		const next = {
+			...humanReviewedByClaim,
+			[claimNumber]: true,
+		};
+		setHumanReviewedByClaim(next);
+		saveHumanReviewedClaims(next);
 		const question = encodeURIComponent(`por que ${claimNumber} fue marcado`);
 		window.location.href = `/?review=${question}#agente`;
 	};
@@ -326,9 +374,17 @@ export function CasosPage() {
 								{currentClaims.map((claim) => {
 									const aiResult = aiResultsByClaim[claim.claimNumber];
 									const aiError = aiErrorsByClaim[claim.claimNumber];
+									const humanReviewed =
+										humanReviewedByClaim[claim.claimNumber] === true;
 									const displayRiskLevel = aiResult
 										? riskLevelFromAnalysis(aiResult.nivel)
 										: claim.riskLevel;
+									const isUrgent = displayRiskLevel === "red";
+									const statusText = reviewStatusText({
+										hasAiResult: Boolean(aiResult),
+										hasAiError: Boolean(aiError),
+										humanReviewed,
+									});
 									const alertText = aiResult
 										? [
 												...aiResult.alertas
@@ -356,7 +412,14 @@ export function CasosPage() {
 											tabIndex={0}
 										>
 											<td className="px-4 py-3 font-medium">
-												{claim.claimNumber}
+												<div className="space-y-1">
+													<p>{claim.claimNumber}</p>
+													{isUrgent ? (
+														<span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800 dark:bg-rose-950 dark:text-rose-100">
+															Urgente
+														</span>
+													) : null}
+												</div>
 											</td>
 											<td className="px-4 py-3">{claim.customerId}</td>
 											<td className="px-4 py-3">{claim.providerId ?? "-"}</td>
@@ -371,11 +434,7 @@ export function CasosPage() {
 															: (claim.mlScore ?? "-")}
 													</p>
 													<p className="text-[11px] text-slate-500 dark:text-slate-400">
-														{aiResult
-															? "Analizado IA"
-															: aiError
-																? "Error IA"
-																: "Pendiente IA"}
+														{statusText}
 													</p>
 												</div>
 											</td>
@@ -397,6 +456,11 @@ export function CasosPage() {
 														? aiResult.nivel
 														: riskLevelText(claim.riskLevel)}
 												</span>
+												{isUrgent ? (
+													<p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-rose-600 dark:text-rose-300">
+														Atencion prioritaria
+													</p>
+												) : null}
 											</td>
 											<td className="max-w-sm px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
 												{aiError ? (

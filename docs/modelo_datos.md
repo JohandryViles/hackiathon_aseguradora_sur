@@ -98,6 +98,13 @@ id_asegurado, segmento, antiguedad, ciudad, numero_polizas,
 reclamos_ultimos_12_meses, mora_actual, score_cliente_simulado
 ```
 
+### Vehiculos
+
+```text
+id_vehiculo, id_asegurado, placa_hash, chasis_hash, motor_hash, marca,
+modelo, anio
+```
+
 ### Beneficiarios
 
 ```text

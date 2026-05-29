@@ -208,6 +208,7 @@ models/model_metrics.json
 01_siniestros_import.csv
 02_polizas_import.csv
 03_asegurados_import.csv
+06_vehiculos_import.csv
 04_proveedores_import.csv
 05_documentos_import.csv
 ```

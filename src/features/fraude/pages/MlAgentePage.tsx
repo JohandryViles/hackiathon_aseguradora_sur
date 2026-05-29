@@ -15,6 +15,8 @@ import { FeatureCard } from "@/features/fraude/components/FeatureCard";
 import { InfoBox } from "@/features/fraude/components/InfoBox";
 import { QueryExample } from "@/features/fraude/components/QueryExample";
 
+const MODEL_PRECISION = "93.06%";
+
 export function MlAgentePage() {
 	const summary = useQuery(api.claims.getSummary, {});
 
@@ -32,7 +34,7 @@ export function MlAgentePage() {
 				<header className="border-b border-slate-200 pb-5 dark:border-slate-800">
 					<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 						<Brain aria-hidden size={15} />
-						ML + Agente
+						IA supervisada
 					</div>
 					<h1 className="mt-1 text-2xl font-bold tracking-tight">
 						IA supervisada y agente de consultas
@@ -54,12 +56,24 @@ export function MlAgentePage() {
 							Su salida principal es una probabilidad que se convierte en score
 							ML para priorizar posibles casos de revision.
 						</p>
+						<div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/70 dark:bg-emerald-950/30">
+							<p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+								Precision del modelo entrenado
+							</p>
+							<p className="mt-2 text-5xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
+								{MODEL_PRECISION}
+							</p>
+							<p className="mt-2 text-sm text-emerald-800 dark:text-emerald-200">
+								Equivale al valor `0.9306` reportado por el entrenamiento del
+								modelo RandomForest.
+							</p>
+						</div>
 						<div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
 							<InfoBox
 								label="Version"
 								value={summary?.modelVersion ?? "sklearn-random-forest-v1"}
 							/>
-							<InfoBox label="Precision" value="0.9306" />
+							<InfoBox label="Precision original" value="0.9306" />
 							<InfoBox label="Recall" value="0.9853" />
 							<InfoBox label="F1-score" value="0.9571" />
 							<InfoBox label="ROC-AUC" value="0.9980" />

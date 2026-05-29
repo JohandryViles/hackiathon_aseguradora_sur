@@ -854,7 +854,7 @@ function extractCustomerId(question: string) {
 }
 
 function extractClaimNumber(question: string) {
-  const match = question.toUpperCase().match(/(?:CLM|PUB)-[A-Z0-9-]+/)
+  const match = question.toUpperCase().match(/(?:CLM|PUB|SIN|YEL)-[A-Z0-9-]+/)
   return match ? match[0] : null
 }
 
@@ -1801,6 +1801,7 @@ export const askAnalystAssistantWithLLM = action({
   handler: async (ctx, args) => {
     const question = args.question.trim()
     const localResponse = await ctx.runQuery(askAnalystAssistantQuery, { question })
+    const referencedClaimNumber = extractClaimNumber(question)
 
     const apiKey = readEnvVar('OPENAI_API_KEY')
     if (!apiKey) {
@@ -1808,7 +1809,7 @@ export const askAnalystAssistantWithLLM = action({
         ...localResponse,
         usedLLM: false,
         model: 'local-rules',
-        answer: `${localResponse.answer}\n\nNota: OPENAI_API_KEY no esta configurada en Convex; esta respuesta usa el agente local basado en reglas.`,
+        answer: localResponse.answer,
       }
     }
 
@@ -1819,6 +1820,13 @@ export const askAnalystAssistantWithLLM = action({
       ctx.runQuery(listWithRiskQuery, { limit: 40 }),
     ])
     const contextClaims = claims.slice(0, 16).map(pickAgentClaimFields)
+    const focusedClaims = (
+      referencedClaimNumber
+        ? localResponse.claims.filter((claim) => claim.claimNumber === referencedClaimNumber)
+        : localResponse.claims
+    )
+      .slice(0, 6)
+      .map(pickAgentClaimFields)
 
     const userMessage = [
       `Pregunta del analista: ${question || 'Resumen ejecutivo'}`,
@@ -1831,6 +1839,9 @@ export const askAnalystAssistantWithLLM = action({
       '',
       'Casos disponibles para contexto:',
       JSON.stringify(contextClaims),
+      '',
+      'Casos especificamente relacionados con la consulta (si existen):',
+      JSON.stringify(focusedClaims),
       '',
       'Devuelve exclusivamente un JSON con esta forma:',
       '{"answer":"respuesta para el analista","recommendedAction":"siguiente accion concreta"}',
@@ -1855,14 +1866,11 @@ export const askAnalystAssistantWithLLM = action({
 
     const data = await response.json()
     if (!response.ok) {
-      const errorMessage =
-        stringFromUnknown(asRecord(asRecord(data)?.error)?.message) ??
-        `OpenAI respondio con estado ${response.status}`
       return {
         ...localResponse,
         usedLLM: false,
         model,
-        answer: `${localResponse.answer}\n\nNota: no fue posible usar OpenAI (${errorMessage}). Se muestra la respuesta local.`,
+        answer: localResponse.answer,
       }
     }
 

@@ -10,12 +10,19 @@ import {
 	ShieldCheck,
 	Upload,
 	Users,
+	Car,
 } from "lucide-react";
 import { type ChangeEvent, type ComponentType, useRef, useState } from "react";
 import { parseCsvRows, parsePayload } from "@/lib/importPayload";
 import { api } from "@/shared/services/convexApi";
 
-type ImportKey = "claims" | "policies" | "insureds" | "providers" | "documents";
+type ImportKey =
+	| "claims"
+	| "policies"
+	| "insureds"
+	| "vehicles"
+	| "providers"
+	| "documents";
 
 type ImportFeedback = {
 	inserted: number;
@@ -56,6 +63,16 @@ const templateRows: Record<ImportKey, string[]> = {
 		"Activa",
 	],
 	insureds: ["CUST-3001", "Retail", "24", "Quito", "2", "1", "false", "710"],
+	vehicles: [
+		"VEH-9001",
+		"CUST-3001",
+		"PLACA-HASH-001",
+		"CH-HASH-001",
+		"EN-HASH-001",
+		"Toyota",
+		"Corolla",
+		"2020",
+	],
 	providers: ["PROV-501", "Taller", "Quito", "12", "4300", "0.18", "60"],
 	documents: [
 		"DOC-8001",
@@ -154,6 +171,22 @@ const importConfigs: ImportConfig[] = [
 		],
 	},
 	{
+		key: "vehicles",
+		title: "Vehiculos",
+		tableName: "vehicles",
+		icon: Car,
+		requiredColumns: [
+			"id_vehiculo",
+			"id_asegurado",
+			"placa_hash",
+			"chasis_hash",
+			"motor_hash",
+			"marca",
+			"modelo",
+			"anio",
+		],
+	},
+	{
 		key: "providers",
 		title: "Beneficiarios",
 		tableName: "providers",
@@ -191,6 +224,7 @@ function createInitialState(): Record<ImportKey, ImportState> {
 		claims: { loading: false },
 		policies: { loading: false },
 		insureds: { loading: false },
+		vehicles: { loading: false },
 		providers: { loading: false },
 		documents: { loading: false },
 	};
@@ -202,6 +236,7 @@ export function ImportacionCsvPage() {
 	const importClaims = useMutation(api.claims.importPublicClaims);
 	const importPolicies = useMutation(api.claims.importPolicies);
 	const importInsureds = useMutation(api.claims.importInsureds);
+	const importVehicles = useMutation(api.claims.importVehicles);
 	const importProviders = useMutation(api.claims.importProviders);
 	const importDocuments = useMutation(api.claims.importClaimDocuments);
 	const [jsonImportKey, setJsonImportKey] = useState<ImportKey>("claims");
@@ -211,6 +246,7 @@ export function ImportacionCsvPage() {
 		claims: null,
 		policies: null,
 		insureds: null,
+		vehicles: null,
 		providers: null,
 		documents: null,
 	});
@@ -232,6 +268,7 @@ export function ImportacionCsvPage() {
 		}
 		if (key === "policies") return importPolicies({ rows });
 		if (key === "insureds") return importInsureds({ rows });
+		if (key === "vehicles") return importVehicles({ rows });
 		if (key === "providers") return importProviders({ rows });
 		return importDocuments({ rows });
 	};

@@ -1286,6 +1286,54 @@ function normalizeProviderImport(row: Record<string, unknown>, index: number) {
   }
 }
 
+function normalizeVehicleImport(row: Record<string, unknown>, index: number) {
+  const vehicleId = toText(readField(row, ['vehicleId', 'vehicle_id', 'id_vehiculo']))
+  const customerId = toText(readField(row, ['customerId', 'customer_id', 'insured_id', 'id_asegurado']))
+  const licensePlateHash = toText(readField(row, ['licensePlateHash', 'license_plate_hash', 'placa_hash']))
+  const chassisHash = toText(readField(row, ['chassisHash', 'chassis_hash', 'chasis_hash']))
+  const engineHash = toText(readField(row, ['engineHash', 'engine_hash', 'motor_hash']))
+  const make = toText(readField(row, ['make', 'marca']))
+  const model = toText(readField(row, ['model', 'modelo']))
+  const year = toNumber(readField(row, ['year', 'anio', 'ano', 'vehicleYear', 'vehicle_year']))
+  const missing = [
+    !vehicleId ? 'id_vehiculo' : null,
+    !customerId ? 'id_asegurado' : null,
+    !licensePlateHash ? 'placa_hash' : null,
+    !chassisHash ? 'chasis_hash' : null,
+    !engineHash ? 'motor_hash' : null,
+    !make ? 'marca' : null,
+    !model ? 'modelo' : null,
+    year === null ? 'anio' : null,
+  ].filter(Boolean)
+
+  if (
+    missing.length > 0 ||
+    !vehicleId ||
+    !customerId ||
+    !licensePlateHash ||
+    !chassisHash ||
+    !engineHash ||
+    !make ||
+    !model ||
+    year === null
+  ) {
+    return { value: null, reason: `Fila ${index + 1}: faltan campos minimos (${missing.join(', ')})` }
+  }
+
+  return {
+    value: {
+      vehicleId,
+      customerId,
+      licensePlateHash,
+      chassisHash,
+      engineHash,
+      make,
+      model,
+      year: clamp(Math.round(year), 1990, new Date().getFullYear()),
+    },
+  }
+}
+
 function normalizeDocumentImport(row: Record<string, unknown>, index: number) {
   const claimNumber = toText(readField(row, ['claimNumber', 'claim_number', 'claim_id', 'id_siniestro']))
   const documentType = toText(readField(row, ['documentType', 'document_type', 'tipo_documento']))
@@ -1454,6 +1502,44 @@ export const importProviders = mutation({
     }
 
     return buildImportResult(inserted, skipped, args.rows.length, errors, 'Beneficiarios')
+  },
+})
+
+export const importVehicles = mutation({
+  args: { rows: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query('vehicles').collect()
+    const existingIds = new Set(existing.map((vehicle) => vehicle.vehicleId))
+    const incomingIds = new Set<string>()
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < args.rows.length; i += 1) {
+      const row = asRecord(args.rows[i])
+      if (!row) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: estructura invalida`)
+        continue
+      }
+      const normalized = normalizeVehicleImport(row, i)
+      if (!normalized.value) {
+        skipped += 1
+        if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
+        continue
+      }
+      if (existingIds.has(normalized.value.vehicleId) || incomingIds.has(normalized.value.vehicleId)) {
+        skipped += 1
+        if (errors.length < 8) errors.push(`Fila ${i + 1}: vehiculo duplicado (${normalized.value.vehicleId})`)
+        continue
+      }
+      await ctx.db.insert('vehicles', normalized.value)
+      existingIds.add(normalized.value.vehicleId)
+      incomingIds.add(normalized.value.vehicleId)
+      inserted += 1
+    }
+
+    return buildImportResult(inserted, skipped, args.rows.length, errors, 'Vehiculos')
   },
 })
 

@@ -60,8 +60,8 @@ class FraudAnalysisService:
             advertencia_etica=ai_result.advertencia_etica,
         )
 
-    def analyze_batch(self, claims: list[ClaimInput]) -> list[AnalysisResponse]:
-        return [self.analyze_claim(claim) for claim in claims]
+    def analyze_batch(self, claims: list[ClaimInput], use_ai: bool = True) -> list[AnalysisResponse]:
+        return [self.analyze_claim(claim, use_ai=use_ai) for claim in claims]
 
     def analyze_dataset(self, limit: int | None = None, use_ai: bool = False) -> list[AnalysisResponse]:
         claims = self.data_service.list_claims(limit=limit)

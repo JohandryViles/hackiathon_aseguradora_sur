@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Body
+from fastapi import Query
 
 from src.schemas.analysis_schema import AnalysisResponse
 from src.schemas.claim_schema import BatchAnalysisRequest, ClaimInput
@@ -41,12 +42,13 @@ CLAIM_EXAMPLE = {
     summary="Analizar un siniestro individual",
 )
 def analyze_claim(
+    use_ai: bool = Query(default=False, description="Usar OpenAI/LangChain. Por defecto usa analisis local rapido."),
     claim: ClaimInput = Body(
         ...,
         examples=[CLAIM_EXAMPLE],
     )
 ) -> AnalysisResponse:
-    return service.analyze_claim(claim)
+    return service.analyze_claim(claim, use_ai=use_ai)
 
 
 @router.post(
@@ -55,10 +57,11 @@ def analyze_claim(
     summary="Analizar varios siniestros",
 )
 def analyze_batch(
+    use_ai: bool = Query(default=False, description="Usar OpenAI/LangChain. Por defecto usa analisis local rapido."),
     request: BatchAnalysisRequest = Body(
         ...,
         examples=[{"claims": [CLAIM_EXAMPLE]}],
     )
 ) -> list[AnalysisResponse]:
-    return service.analyze_batch(request.claims)
+    return service.analyze_batch(request.claims, use_ai=use_ai)
 

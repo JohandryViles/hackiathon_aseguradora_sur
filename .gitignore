@@ -12,3 +12,12 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest/cache
+.pytest_cache/

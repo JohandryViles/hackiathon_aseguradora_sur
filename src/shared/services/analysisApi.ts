@@ -337,8 +337,10 @@ function buildImportedClaimPayload(row: RawClaimRow): ClaimAnalysisPayload {
 
 async function postClaimAnalysis(
 	payload: ClaimAnalysisPayload,
+	options: { useExternalAi?: boolean } = {},
 ): Promise<AnalysisResult> {
-	const response = await fetch(`${API_BASE_URL}/api/analysis/claim`, {
+	const useAi = options.useExternalAi ? "true" : "false";
+	const response = await fetch(`${API_BASE_URL}/api/analysis/claim?use_ai=${useAi}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(payload),
@@ -356,8 +358,32 @@ async function postClaimAnalysis(
 
 export async function analyzeClaimWithAi(
 	claim: ClaimForAnalysis,
+	options: { useExternalAi?: boolean } = {},
 ): Promise<AnalysisResult> {
-	return postClaimAnalysis(buildAnalysisPayload(claim));
+	return postClaimAnalysis(buildAnalysisPayload(claim), options);
+}
+
+export async function analyzeClaimsBatchWithAi(
+	claims: ClaimForAnalysis[],
+	options: { useExternalAi?: boolean } = {},
+): Promise<AnalysisResult[]> {
+	const useAi = options.useExternalAi ? "true" : "false";
+	const response = await fetch(`${API_BASE_URL}/api/analysis/batch?use_ai=${useAi}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			claims: claims.map(buildAnalysisPayload),
+		}),
+	});
+
+	if (!response.ok) {
+		const detail = await response.text();
+		throw new Error(
+			`FastAPI respondio ${response.status}: ${detail || response.statusText}`,
+		);
+	}
+
+	return response.json() as Promise<AnalysisResult[]>;
 }
 
 export async function analyzeImportedClaimRowWithAi(

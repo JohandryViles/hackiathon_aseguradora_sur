@@ -36,7 +36,7 @@ type AiRunState = {
 };
 
 const HUMAN_REVIEW_STORAGE_KEY = "aseguradora-sur-human-reviewed-claims-v1";
-
+const PROGRESS_FRAME_DELAY_MS = 80;
 function riskLevelFromAnalysis(nivel?: string): "green" | "yellow" | "red" {
 	if (nivel === "Rojo") return "red";
 	if (nivel === "Amarillo") return "yellow";
@@ -77,6 +77,12 @@ function loadHumanReviewedClaims() {
 function saveHumanReviewedClaims(value: Record<string, boolean>) {
 	if (typeof window === "undefined") return;
 	window.localStorage.setItem(HUMAN_REVIEW_STORAGE_KEY, JSON.stringify(value));
+}
+
+function waitForProgressFrame() {
+	return new Promise((resolve) => {
+		window.setTimeout(resolve, PROGRESS_FRAME_DELAY_MS);
+	});
 }
 
 export function CasosPage() {
@@ -148,12 +154,27 @@ export function CasosPage() {
 	const failedCount = Object.keys(aiErrorsByClaim).length;
 	const analysisProgress =
 		aiRun.total > 0 ? Math.round((aiRun.processed / aiRun.total) * 100) : 0;
+	const visibleAnalyzedCount = currentClaims.filter(
+		(claim) => aiResultsByClaim[claim.claimNumber],
+	).length;
+	const visibleFailedCount = currentClaims.filter(
+		(claim) => aiErrorsByClaim[claim.claimNumber],
+	).length;
 
 	const onAnalyzeVisibleClaims = async () => {
 		const claimsToAnalyze = currentClaims as ClaimForAnalysis[];
 		if (claimsToAnalyze.length === 0 || aiRun.status === "running") return;
 
-		setAiErrorsByClaim({});
+		const visibleClaimNumbers = new Set(
+			claimsToAnalyze.map((claim) => claim.claimNumber),
+		);
+		setAiErrorsByClaim((current) =>
+			Object.fromEntries(
+				Object.entries(current).filter(
+					([claimNumber]) => !visibleClaimNumbers.has(claimNumber),
+				),
+			),
+		);
 		setAiRun({
 			status: "running",
 			processed: 0,
@@ -161,47 +182,104 @@ export function CasosPage() {
 			currentClaim: claimsToAnalyze[0]?.claimNumber,
 		});
 
-		let errors = 0;
+		try {
+			const results: AnalysisResult[] = [];
+			const failedClaims: Array<{ claimNumber: string; message: string }> = [];
 
-		for (const [index, claim] of claimsToAnalyze.entries()) {
-			setAiRun((current) => ({
-				...current,
-				currentClaim: claim.claimNumber,
-				processed: index,
-			}));
-
-			try {
-				const result = await analyzeClaimWithAi(claim);
-				setAiResultsByClaim((current) => ({
+			for (const [index, claim] of claimsToAnalyze.entries()) {
+				setAiRun((current) => ({
 					...current,
-					[claim.claimNumber]: result,
+					currentClaim: claim.claimNumber,
+					processed: index,
 				}));
-			} catch (error) {
-				errors += 1;
+
+				try {
+					const result = await analyzeClaimWithAi(claim, {
+						useExternalAi: false,
+					});
+					results.push(result);
+					setAiResultsByClaim((current) => ({
+						...current,
+						[result.id_siniestro]: result,
+					}));
+				} catch (error) {
+					failedClaims.push({
+						claimNumber: claim.claimNumber,
+						message:
+							error instanceof Error
+								? error.message
+								: "No fue posible analizar este caso.",
+					});
+				}
+
+				setAiRun((current) => ({
+					...current,
+					processed: index + 1,
+				}));
+				await waitForProgressFrame();
+			}
+
+			const resultsByClaim = Object.fromEntries(
+				results.map((result) => [result.id_siniestro, result]),
+			);
+			const missingClaims = claimsToAnalyze.filter(
+				(claim) =>
+					!resultsByClaim[claim.claimNumber] &&
+					!failedClaims.some((failed) => failed.claimNumber === claim.claimNumber),
+			);
+
+			setAiResultsByClaim((current) => ({
+				...current,
+				...resultsByClaim,
+			}));
+			if (missingClaims.length > 0 || failedClaims.length > 0) {
 				setAiErrorsByClaim((current) => ({
 					...current,
-					[claim.claimNumber]:
-						error instanceof Error
-							? error.message
-							: "No fue posible analizar el caso con IA.",
+					...Object.fromEntries(
+						missingClaims.map((claim) => [
+							claim.claimNumber,
+							"FastAPI no devolvio resultado para este caso.",
+						]),
+					),
+					...Object.fromEntries(
+						failedClaims.map((failed) => [
+							failed.claimNumber,
+							failed.message,
+						]),
+					),
 				}));
 			}
 
-			setAiRun((current) => ({
-				...current,
-				processed: index + 1,
-			}));
-		}
+			const errorCount = missingClaims.length + failedClaims.length;
 
-		setAiRun({
-			status: errors > 0 ? "completed_with_errors" : "completed",
-			processed: claimsToAnalyze.length,
-			total: claimsToAnalyze.length,
-			error:
-				errors > 0
-					? `${errors} caso${errors === 1 ? "" : "s"} no se pudo analizar.`
-					: undefined,
-		});
+			setAiRun({
+				status:
+					errorCount > 0 ? "completed_with_errors" : "completed",
+				processed: claimsToAnalyze.length,
+				total: claimsToAnalyze.length,
+				error:
+					errorCount > 0
+						? `${errorCount} caso${errorCount === 1 ? "" : "s"} no se pudo analizar.`
+						: undefined,
+			});
+		} catch (error) {
+			const message =
+				error instanceof Error
+					? error.message
+					: "No fue posible analizar los casos con IA.";
+			setAiErrorsByClaim((current) => ({
+				...current,
+				...Object.fromEntries(
+					claimsToAnalyze.map((claim) => [claim.claimNumber, message]),
+				),
+			}));
+			setAiRun({
+				status: "error",
+				processed: 0,
+				total: claimsToAnalyze.length,
+				error: message,
+			});
+		}
 	};
 
 	const onReviewClaim = (claimNumber: string) => {
@@ -329,7 +407,7 @@ export function CasosPage() {
 										<p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
 											{aiRun.status === "running"
 												? `Procesando ${aiRun.currentClaim ?? "caso actual"} (${aiRun.processed}/${aiRun.total}).`
-												: `Analizados: ${analyzedCount}. Errores: ${failedCount}.`}
+												: `Visibles analizados: ${visibleAnalyzedCount}. Errores visibles: ${visibleFailedCount}. Total guardado: ${analyzedCount}.`}
 										</p>
 										{aiRun.error ? (
 											<p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
@@ -347,10 +425,15 @@ export function CasosPage() {
 									</div>
 									<div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
 										<div
-											className="h-full rounded-full bg-slate-950 transition-all duration-300 dark:bg-slate-100"
+											className="h-full rounded-full bg-slate-950 transition-all duration-500 ease-out dark:bg-slate-100"
 											style={{ width: `${analysisProgress}%` }}
 										/>
 									</div>
+									{aiRun.status === "running" ? (
+										<div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+											<div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500 dark:bg-indigo-300" />
+										</div>
+									) : null}
 								</div>
 							</div>
 						</div>

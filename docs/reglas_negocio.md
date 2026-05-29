@@ -38,6 +38,21 @@ score_final = 0.55 * score_ml + 0.45 * score_reglas
 Si un siniestro importado no trae `mlRiskScore` o `fraud_probability`, se usa
 solo el score de reglas.
 
+La API FastAPI opcional calcula:
+
+```text
+score_final = score_reglas * 0.50 + score_patrones * 0.25 + score_ia * 0.25
+```
+
+Componentes:
+
+- `score_reglas`: reglas auditables de negocio.
+- `score_patrones`: comparacion contra dataset, proveedor, asegurado, montos y
+  documentos.
+- `score_ia`: modelo preentrenado via API con OpenAI/LangChain o fallback local.
+
+El resultado se expresa como alerta preventiva y requiere revision humana.
+
 ## Semaforo
 
 | Rango | Nivel | Accion |

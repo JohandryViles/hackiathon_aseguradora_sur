@@ -10,6 +10,9 @@
 - La similitud narrativa actual se maneja como variable simulada.
 - El agente local usa intenciones simples.
 - El agente con LLM depende de `OPENAI_API_KEY` y de disponibilidad externa.
+- La API FastAPI opcional usa fallback local cuando `AI_ENABLED=false` o no hay
+  `OPENAI_API_KEY`; ese fallback no sustituye la validacion de un modelo
+  calibrado con historicos reales.
 - El dashboard esta pensado para demo y priorizacion, no para produccion.
 
 ## Seguridad y privacidad

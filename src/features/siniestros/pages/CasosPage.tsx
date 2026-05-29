@@ -1,19 +1,70 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { ArrowLeft, ClipboardList, Download, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+	ArrowLeft,
+	Bot,
+	BrainCircuit,
+	ClipboardList,
+	Download,
+	Loader2,
+	Search,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PriorityGroup } from "@/features/siniestros/components/PriorityGroup";
+import { riskPillStyles } from "@/shared/constants/riskStyles";
+import {
+	type AnalysisResult,
+	analyzeClaimWithAi,
+	type ClaimForAnalysis,
+	loadStoredAiAnalysisResults,
+	saveStoredAiAnalysisResults,
+} from "@/shared/services/analysisApi";
 import { api } from "@/shared/services/convexApi";
 import { exportClaimsCsv } from "@/shared/services/exportCsv";
-import { riskLevelText } from "@/shared/utils/riskLevelText";
-import { formatNumber } from "@/shared/utils/formatNumber";
-import { riskPillStyles } from "@/shared/constants/riskStyles";
 import type { RiskFilter } from "@/shared/types/claims";
+import { formatNumber } from "@/shared/utils/formatNumber";
+import { riskLevelText } from "@/shared/utils/riskLevelText";
+
+type AiRunState = {
+	status: "idle" | "running" | "completed" | "completed_with_errors" | "error";
+	processed: number;
+	total: number;
+	currentClaim?: string;
+	error?: string;
+};
+
+function riskLevelFromAnalysis(nivel?: string): "green" | "yellow" | "red" {
+	if (nivel === "Rojo") return "red";
+	if (nivel === "Amarillo") return "yellow";
+	return "green";
+}
 
 export function CasosPage() {
 	const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
 	const [search, setSearch] = useState("");
+	const [aiRun, setAiRun] = useState<AiRunState>({
+		status: "idle",
+		processed: 0,
+		total: 0,
+	});
+	const [aiResultsLoaded, setAiResultsLoaded] = useState(false);
+	const [aiResultsByClaim, setAiResultsByClaim] = useState<
+		Record<string, AnalysisResult>
+	>({});
+	const [aiErrorsByClaim, setAiErrorsByClaim] = useState<
+		Record<string, string>
+	>({});
+
+	useEffect(() => {
+		setAiResultsByClaim(loadStoredAiAnalysisResults());
+		setAiResultsLoaded(true);
+	}, []);
+
+	useEffect(() => {
+		if (!aiResultsLoaded) return;
+		saveStoredAiAnalysisResults(aiResultsByClaim);
+	}, [aiResultsByClaim, aiResultsLoaded]);
 
 	const allClaims = useQuery(api.claims.listWithRisk, { limit: 200 });
 	const tableClaims = useQuery(api.claims.listWithRisk, {
@@ -42,6 +93,66 @@ export function CasosPage() {
 		[processedClaims],
 	);
 
+	const analyzedCount = Object.keys(aiResultsByClaim).length;
+	const failedCount = Object.keys(aiErrorsByClaim).length;
+	const analysisProgress =
+		aiRun.total > 0 ? Math.round((aiRun.processed / aiRun.total) * 100) : 0;
+
+	const onAnalyzeVisibleClaims = async () => {
+		const claimsToAnalyze = currentClaims as ClaimForAnalysis[];
+		if (claimsToAnalyze.length === 0 || aiRun.status === "running") return;
+
+		setAiErrorsByClaim({});
+		setAiRun({
+			status: "running",
+			processed: 0,
+			total: claimsToAnalyze.length,
+			currentClaim: claimsToAnalyze[0]?.claimNumber,
+		});
+
+		let errors = 0;
+
+		for (const [index, claim] of claimsToAnalyze.entries()) {
+			setAiRun((current) => ({
+				...current,
+				currentClaim: claim.claimNumber,
+				processed: index,
+			}));
+
+			try {
+				const result = await analyzeClaimWithAi(claim);
+				setAiResultsByClaim((current) => ({
+					...current,
+					[claim.claimNumber]: result,
+				}));
+			} catch (error) {
+				errors += 1;
+				setAiErrorsByClaim((current) => ({
+					...current,
+					[claim.claimNumber]:
+						error instanceof Error
+							? error.message
+							: "No fue posible analizar el caso con IA.",
+				}));
+			}
+
+			setAiRun((current) => ({
+				...current,
+				processed: index + 1,
+			}));
+		}
+
+		setAiRun({
+			status: errors > 0 ? "completed_with_errors" : "completed",
+			processed: claimsToAnalyze.length,
+			total: claimsToAnalyze.length,
+			error:
+				errors > 0
+					? `${errors} caso${errors === 1 ? "" : "s"} no se pudo analizar.`
+					: undefined,
+		});
+	};
+
 	return (
 		<div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 md:px-8 dark:bg-slate-950 dark:text-slate-100">
 			<div className="mx-auto max-w-7xl space-y-6">
@@ -53,15 +164,35 @@ export function CasosPage() {
 						<ArrowLeft aria-hidden size={16} />
 						Volver al dashboard
 					</Link>
-					<button
-						className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-						disabled={processedClaims.length === 0}
-						onClick={() => exportClaimsCsv(processedClaims)}
-						type="button"
-					>
-						<Download aria-hidden size={16} />
-						Exportar
-					</button>
+					<div className="flex flex-wrap gap-2">
+						<button
+							className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+							disabled={
+								currentClaims.length === 0 || aiRun.status === "running"
+							}
+							onClick={onAnalyzeVisibleClaims}
+							title="Analiza los casos visibles uno por uno usando FastAPI e IA."
+							type="button"
+						>
+							{aiRun.status === "running" ? (
+								<Loader2 aria-hidden className="animate-spin" size={16} />
+							) : (
+								<BrainCircuit aria-hidden size={16} />
+							)}
+							{aiRun.status === "running"
+								? "Analizando"
+								: "Analizar visibles con IA"}
+						</button>
+						<button
+							className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+							disabled={processedClaims.length === 0}
+							onClick={() => exportClaimsCsv(processedClaims)}
+							type="button"
+						>
+							<Download aria-hidden size={16} />
+							Exportar
+						</button>
+					</div>
 				</div>
 
 				<header className="border-b border-slate-200 pb-5 dark:border-slate-800">
@@ -122,6 +253,46 @@ export function CasosPage() {
 							<option value="red">Alto</option>
 						</select>
 					</div>
+					{aiRun.status !== "idle" || analyzedCount > 0 || failedCount > 0 ? (
+						<div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+								<div className="flex min-w-0 items-start gap-3">
+									<div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950">
+										<Bot aria-hidden size={17} />
+									</div>
+									<div className="min-w-0">
+										<p className="text-sm font-semibold">
+											Verificacion IA de casos visibles
+										</p>
+										<p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+											{aiRun.status === "running"
+												? `Procesando ${aiRun.currentClaim ?? "caso actual"} (${aiRun.processed}/${aiRun.total}).`
+												: `Analizados: ${analyzedCount}. Errores: ${failedCount}.`}
+										</p>
+										{aiRun.error ? (
+											<p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+												{aiRun.error}
+											</p>
+										) : null}
+									</div>
+								</div>
+								<div className="w-full max-w-sm">
+									<div className="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+										<span>{analysisProgress}%</span>
+										<span>
+											{aiRun.processed}/{aiRun.total}
+										</span>
+									</div>
+									<div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+										<div
+											className="h-full rounded-full bg-slate-950 transition-all duration-300 dark:bg-slate-100"
+											style={{ width: `${analysisProgress}%` }}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+					) : null}
 					<div className="overflow-x-auto">
 						<table className="min-w-full text-sm">
 							<thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -138,38 +309,83 @@ export function CasosPage() {
 								</tr>
 							</thead>
 							<tbody>
-								{currentClaims.map((claim) => (
-									<tr
-										className="border-t border-slate-100 align-top hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
-										key={claim._id}
-									>
-										<td className="px-4 py-3 font-medium">
-											{claim.claimNumber}
-										</td>
-										<td className="px-4 py-3">{claim.customerId}</td>
-										<td className="px-4 py-3">
-											{claim.providerId ?? "-"}
-										</td>
-										<td className="px-4 py-3">
-											${formatNumber(claim.claimAmount)}
-										</td>
-										<td className="px-4 py-3">{claim.mlScore ?? "-"}</td>
-										<td className="px-4 py-3">{claim.ruleRiskScore}</td>
-										<td className="px-4 py-3 font-semibold">{claim.riskScore}</td>
-										<td className="px-4 py-3">
-											<span
-												className={`rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[claim.riskLevel]}`}
-											>
-												{riskLevelText(claim.riskLevel)}
-											</span>
-										</td>
-										<td className="max-w-sm px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
-											{claim.anomalyFlags.length > 0
-												? claim.anomalyFlags.slice(0, 2).join(" | ")
-												: "Sin alertas relevantes"}
-										</td>
-									</tr>
-								))}
+								{currentClaims.map((claim) => {
+									const aiResult = aiResultsByClaim[claim.claimNumber];
+									const aiError = aiErrorsByClaim[claim.claimNumber];
+									const displayRiskLevel = aiResult
+										? riskLevelFromAnalysis(aiResult.nivel)
+										: claim.riskLevel;
+									const alertText = aiResult
+										? [
+												...aiResult.alertas
+													.slice(0, 2)
+													.map((alert) => alert.regla),
+												...aiResult.patrones_detectados.slice(0, 1),
+											].join(" | ") || aiResult.explicacion
+										: claim.anomalyFlags.length > 0
+											? claim.anomalyFlags.slice(0, 2).join(" | ")
+											: "Sin alertas relevantes";
+
+									return (
+										<tr
+											className="border-t border-slate-100 align-top hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+											key={claim._id}
+										>
+											<td className="px-4 py-3 font-medium">
+												{claim.claimNumber}
+											</td>
+											<td className="px-4 py-3">{claim.customerId}</td>
+											<td className="px-4 py-3">{claim.providerId ?? "-"}</td>
+											<td className="px-4 py-3">
+												${formatNumber(claim.claimAmount)}
+											</td>
+											<td className="px-4 py-3">
+												<div className="space-y-1">
+													<p className="font-semibold">
+														{aiResult
+															? Math.round(aiResult.score_ia)
+															: (claim.mlScore ?? "-")}
+													</p>
+													<p className="text-[11px] text-slate-500 dark:text-slate-400">
+														{aiResult
+															? "Analizado IA"
+															: aiError
+																? "Error IA"
+																: "Pendiente IA"}
+													</p>
+												</div>
+											</td>
+											<td className="px-4 py-3">
+												{aiResult
+													? Math.round(aiResult.score_reglas)
+													: claim.ruleRiskScore}
+											</td>
+											<td className="px-4 py-3 font-semibold">
+												{aiResult
+													? aiResult.score_final.toFixed(2)
+													: claim.riskScore}
+											</td>
+											<td className="px-4 py-3">
+												<span
+													className={`rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[displayRiskLevel]}`}
+												>
+													{aiResult
+														? aiResult.nivel
+														: riskLevelText(claim.riskLevel)}
+												</span>
+											</td>
+											<td className="max-w-sm px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
+												{aiError ? (
+													<span className="text-rose-700 dark:text-rose-300">
+														{aiError}
+													</span>
+												) : (
+													alertText
+												)}
+											</td>
+										</tr>
+									);
+								})}
 								{tableClaims && currentClaims.length === 0 ? (
 									<tr>
 										<td

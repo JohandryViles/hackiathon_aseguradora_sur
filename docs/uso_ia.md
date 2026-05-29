@@ -9,6 +9,7 @@ La solucion usa un enfoque hibrido:
 3. Analisis textual simple mediante similitud narrativa simulada.
 4. Agente local por intenciones.
 5. Agente de IA generativa opcional mediante OpenAI desde Convex.
+6. API FastAPI opcional con OpenAI/LangChain y fallback local.
 
 ## Modelo supervisado
 
@@ -101,6 +102,16 @@ score_final = 0.55 * score_ml + 0.45 * score_reglas
 Si un siniestro importado no trae `mlRiskScore` o `fraud_probability`, Convex
 usa el score de reglas.
 
+La API FastAPI opcional usa un score hibrido separado:
+
+```text
+score_final = score_reglas * 0.50 + score_patrones * 0.25 + score_ia * 0.25
+```
+
+La razon es dar mayor peso a reglas auditables del negocio y usar patrones/IA
+como soporte explicativo. Si OpenAI no esta configurado, `score_ia` se calcula
+con un fallback local deterministico basado en reglas y patrones.
+
 Semaforo:
 
 | Rango | Nivel | Accion |
@@ -139,6 +150,20 @@ La key debe vivir en Convex, no en React:
 npx convex env set OPENAI_API_KEY "sk-..."
 npx convex env set OPENAI_MODEL "gpt-4.1-mini"
 ```
+
+Para FastAPI:
+
+```bash
+AI_ENABLED=true
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
+uvicorn src.app.main:app --reload
+```
+
+El agente FastAPI devuelve JSON valido con `score_ia`, patrones,
+inconsistencias, explicacion, recomendacion y advertencia etica. El lenguaje
+debe hablar de posible señal de riesgo, alerta preventiva y revision humana; no
+debe acusar ni recomendar rechazo automatico.
 
 System message opcional:
 

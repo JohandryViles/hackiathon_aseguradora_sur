@@ -18,9 +18,12 @@ flowchart LR
   E --> F["Dashboard React"]
   E --> G["Agente local por reglas"]
   E --> I["Action Convex con OpenAI"]
+  K["FastAPI opcional"] --> L["Reglas + patrones + OpenAI/LangChain"]
+  A --> K
   I --> J["LLM opcional"]
   G --> F
   J --> F
+  L --> H
   F --> H["Analista"]
 ```
 
@@ -38,6 +41,10 @@ flowchart LR
 8. El dashboard muestra semaforo, explicaciones, rankings y exportacion.
 9. El agente responde consultas con OpenAI si hay `OPENAI_API_KEY`; si no,
    responde con el agente local basado en reglas.
+10. La API FastAPI opcional expone analisis REST con:
+    `score_final = score_reglas * 0.50 + score_patrones * 0.25 + score_ia * 0.25`.
+    Esta API no reemplaza Convex; sirve para integrar modelos preentrenados via
+    API y consumidores externos.
 
 ## Rutas de frontend
 
@@ -59,9 +66,21 @@ flowchart LR
 - `askAnalystAssistantWithLLM`
 - `seedSyntheticData` para demos internas o carga sintetica desde backend.
 
+## Endpoints FastAPI opcionales
+
+- `GET /health`
+- `POST /api/analysis/claim`
+- `POST /api/analysis/batch`
+- `GET /api/agent/top-risk`
+- `GET /api/agent/explain/{claim_id}`
+- `GET /api/agent/providers-alerts`
+- `GET /api/agent/executive-summary`
+
 ## Decisiones tecnicas
 
 - Convex se usa para persistencia, consultas reactivas, importacion y actions.
+- FastAPI se agrega como backend paralelo para analisis REST, sin romper el
+  frontend ni las funciones Convex existentes.
 - El modelo se entrena offline en Python para cumplir el requisito de
   scikit-learn.
 - Las reglas se mantienen visibles para trazabilidad y explicabilidad.

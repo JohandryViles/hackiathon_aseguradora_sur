@@ -17,9 +17,10 @@ siniestros y no toma decisiones automaticas de pago.
 
 - Frontend: React, TanStack Start, TanStack Router, Tailwind CSS.
 - Backend y persistencia: Convex.
+- API de analisis opcional: FastAPI.
 - Modelo ML: Python, pandas, scikit-learn, RandomForestClassifier.
 - Persistencia del modelo: joblib.
-- Agente IA: Convex action con OpenAI opcional y fallback local por reglas.
+- Agente IA: Convex action o FastAPI con OpenAI/LangChain opcional y fallback local por reglas.
 
 ## Estructura principal
 
@@ -32,7 +33,7 @@ ml/                      Generacion de datos y entrenamiento scikit-learn
 models/                  Modelo joblib y metricas JSON
 presentation/            Guion ejecutivo para pitch
 sql/                     DDL relacional de referencia
-src/                     Aplicacion web
+src/                     Aplicacion web y API FastAPI opcional
 ```
 
 ## Instalacion
@@ -115,6 +116,49 @@ npx convex env set OPENAI_SYSTEM_MESSAGE "Eres un analista antifraude de seguros
 
 Si `OPENAI_API_KEY` no esta configurada, el dashboard sigue funcionando con el
 agente local basado en reglas e intenciones.
+
+## Ejecutar API FastAPI opcional
+
+La API Python convive con Convex y sirve para probar analisis por REST:
+
+```bash
+python -m pip install -r requirements.txt
+uvicorn src.app.main:app --reload
+```
+
+Si instalas dependencias dentro de `.python_deps`, ejecuta:
+
+```powershell
+$env:PYTHONPATH=".python_deps;."
+python -m uvicorn src.app.main:app --reload
+```
+
+Swagger queda disponible en:
+
+```text
+http://localhost:8000/docs
+```
+
+Variables de entorno:
+
+```text
+AI_ENABLED=true
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Si no hay `OPENAI_API_KEY` o `AI_ENABLED=false`, la API usa fallback local
+deterministico con reglas y patrones.
+
+Endpoints principales:
+
+- `GET /health`
+- `POST /api/analysis/claim`
+- `POST /api/analysis/batch`
+- `GET /api/agent/top-risk`
+- `GET /api/agent/explain/{claim_id}`
+- `GET /api/agent/providers-alerts`
+- `GET /api/agent/executive-summary`
 
 ## Ejecutar la aplicacion
 
@@ -207,6 +251,7 @@ bun run lint
 bun run check
 python ml/generate_synthetic_claims.py
 python ml/train_fraud_model.py
+uvicorn src.app.main:app --reload
 ```
 
 Nota: `bun run check` puede fallar si los archivos estan con finales CRLF o si

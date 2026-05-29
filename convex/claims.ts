@@ -358,6 +358,10 @@ function normalizeImportKey(value: string) {
     .replace(/^_+|_+$/g, '')
 }
 
+function canonicalToken(value: string) {
+  return value.trim().toUpperCase()
+}
+
 function readField(row: Record<string, unknown>, aliases: string[]): unknown {
   for (const alias of aliases) {
     if (alias in row && row[alias] !== undefined && row[alias] !== null) {
@@ -1509,8 +1513,18 @@ export const importVehicles = mutation({
   args: { rows: v.array(v.any()) },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query('vehicles').collect()
-    const existingIds = new Set(existing.map((vehicle) => vehicle.vehicleId))
+    const existingIds = new Set(existing.map((vehicle) => canonicalToken(vehicle.vehicleId)))
+    const existingFingerprints = new Set(
+      existing.map((vehicle) =>
+        [
+          canonicalToken(vehicle.licensePlateHash),
+          canonicalToken(vehicle.chassisHash),
+          canonicalToken(vehicle.engineHash),
+        ].join('|'),
+      ),
+    )
     const incomingIds = new Set<string>()
+    const incomingFingerprints = new Set<string>()
     let inserted = 0
     let skipped = 0
     const errors: string[] = []
@@ -1528,14 +1542,30 @@ export const importVehicles = mutation({
         if (normalized.reason && errors.length < 8) errors.push(normalized.reason)
         continue
       }
-      if (existingIds.has(normalized.value.vehicleId) || incomingIds.has(normalized.value.vehicleId)) {
+      const canonicalVehicleId = canonicalToken(normalized.value.vehicleId)
+      const fingerprint = [
+        canonicalToken(normalized.value.licensePlateHash),
+        canonicalToken(normalized.value.chassisHash),
+        canonicalToken(normalized.value.engineHash),
+      ].join('|')
+
+      if (
+        existingIds.has(canonicalVehicleId) ||
+        incomingIds.has(canonicalVehicleId) ||
+        existingFingerprints.has(fingerprint) ||
+        incomingFingerprints.has(fingerprint)
+      ) {
         skipped += 1
-        if (errors.length < 8) errors.push(`Fila ${i + 1}: vehiculo duplicado (${normalized.value.vehicleId})`)
+        if (errors.length < 8) {
+          errors.push(`Fila ${i + 1}: vehiculo duplicado (${normalized.value.vehicleId})`)
+        }
         continue
       }
       await ctx.db.insert('vehicles', normalized.value)
-      existingIds.add(normalized.value.vehicleId)
-      incomingIds.add(normalized.value.vehicleId)
+      existingIds.add(canonicalVehicleId)
+      incomingIds.add(canonicalVehicleId)
+      existingFingerprints.add(fingerprint)
+      incomingFingerprints.add(fingerprint)
       inserted += 1
     }
 

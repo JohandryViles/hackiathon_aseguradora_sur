@@ -14,7 +14,7 @@ export function AlertConcentrationCard({
 	lines,
 }: AlertConcentrationCardProps) {
 	return (
-		<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+		<div className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0">
 					<h2 className="font-semibold">Concentracion de alertas</h2>

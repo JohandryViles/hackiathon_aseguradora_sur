@@ -7,7 +7,7 @@ type InfoLineProps = {
 
 export function InfoLine({ label, value }: InfoLineProps) {
 	return (
-		<div className="rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+		<div className="rounded-lg border border-slate-200/70 bg-slate-50/95 p-3 shadow-sm shadow-slate-200/40 dark:border-slate-700/70 dark:bg-slate-800/60 dark:shadow-black/15">
 			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 				{label}
 			</p>

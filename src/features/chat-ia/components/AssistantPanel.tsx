@@ -59,7 +59,7 @@ export function AssistantPanel({
 					.slice(0, 8);
 	return (
 		<div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-			<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+			<div className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
 				<form className="space-y-3" onSubmit={onAsk}>
 					<input
 						aria-autocomplete="list"
@@ -125,7 +125,7 @@ export function AssistantPanel({
 
 			<div
 				aria-live="polite"
-				className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80"
+				className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35"
 			>
 				<h2 className="font-semibold">Respuesta</h2>
 				{assistantError ? (

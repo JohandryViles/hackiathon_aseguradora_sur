@@ -29,18 +29,20 @@ export function PriorityGroup({
 	const styles = {
 		red: {
 			container:
-				"border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100",
+				"border-rose-200/90 bg-rose-50/95 text-rose-950 shadow-sm shadow-rose-200/50 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100 dark:shadow-black/20",
 			row: "border-rose-200/80 dark:border-rose-900/60",
 		},
 		yellow: {
 			container:
-				"border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100",
+				"border-amber-200/90 bg-amber-50/95 text-amber-950 shadow-sm shadow-amber-200/50 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100 dark:shadow-black/20",
 			row: "border-amber-200/80 dark:border-amber-900/60",
 		},
 	};
 
 	return (
-		<div className={`min-w-0 rounded-lg border p-4 ${styles[color].container}`}>
+		<div
+			className={`min-w-0 rounded-xl border p-4 transition-shadow duration-200 hover:shadow-md ${styles[color].container}`}
+		>
 			<h3 className="font-semibold">{title}</h3>
 			<div className="mt-3 divide-y text-sm">
 				{claims.map((claim) => (

@@ -176,14 +176,14 @@ const importConfigs: ImportConfig[] = [
 		tableName: "vehicles",
 		icon: Car,
 		requiredColumns: [
-			"id_vehiculo",
-			"id_asegurado",
-			"placa_hash",
-			"chasis_hash",
-			"motor_hash",
-			"marca",
-			"modelo",
-			"anio",
+			"vehicleId",
+			"customerId",
+			"licensePlateHash",
+			"chassisHash",
+			"engineHash",
+			"make",
+			"model",
+			"year",
 		],
 	},
 	{
@@ -412,7 +412,7 @@ export function ImportacionCsvPage() {
 					))}
 				</div>
 
-				<section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+				<section className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
 					<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 						<div>
 							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -512,7 +512,7 @@ function ImportCard({
 			: "Elegir CSV";
 
 	return (
-		<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+		<div className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
 					<Icon aria-hidden className="text-slate-500" size={18} />

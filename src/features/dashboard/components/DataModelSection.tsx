@@ -28,7 +28,7 @@ export function DataModelSection({
 				title="Modelo de datos"
 				description="Conteo operativo de las tablas cargadas en Convex para alimentar el dashboard y las consultas."
 			/>
-			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+			<div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-200/60 transition-shadow duration-200 hover:shadow-md hover:shadow-slate-300/40 dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-black/25 dark:hover:shadow-black/35">
 				<div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
 					<InfoLine label="Polizas" value={policies} />
 					<InfoLine label="Asegurados" value={insureds} />

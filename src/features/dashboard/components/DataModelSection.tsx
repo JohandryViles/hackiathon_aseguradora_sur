@@ -25,7 +25,7 @@ export function DataModelSection({
 			<SectionHeader
 				icon={Gauge}
 				kicker="Datos demo"
-				title="Modelo de datos demo"
+				title="Modelo de datos"
 				description="Conteo operativo de las tablas cargadas en Convex para alimentar el dashboard y las consultas."
 			/>
 			<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">

@@ -12,7 +12,7 @@ export type NavItem = {
 export const navItems: NavItem[] = [
 	{ href: "#resumen", label: "Resumen", icon: LayoutDashboard },
 	{ href: "/ML_AGENTE", label: "ML + Agente", icon: Brain },
-	{ href: "#modelo", label: "Datos demo", icon: Gauge },
+	{ href: "#modelo", label: "Datos", icon: Gauge },
 	{ href: "/casos", label: "Casos", icon: ClipboardList },
 	{ href: "#agente", label: "Agente", icon: Bot },
 ];

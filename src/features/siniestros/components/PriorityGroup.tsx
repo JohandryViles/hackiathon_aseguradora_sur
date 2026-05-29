@@ -27,7 +27,7 @@ export function PriorityGroup({
 	};
 
 	return (
-		<div className={`rounded-lg border p-4 ${styles[color].container}`}>
+		<div className={`min-w-0 rounded-lg border p-4 ${styles[color].container}`}>
 			<h2 className="font-semibold">{title}</h2>
 			<div className="mt-3 divide-y text-sm">
 				{claims.map((claim) => (
@@ -47,7 +47,7 @@ export function PriorityGroup({
 								<p className="text-xs opacity-80">score</p>
 							</div>
 						</div>
-						<p className="text-xs opacity-85">
+						<p className="break-words text-xs opacity-85">
 							{claim.anomalyFlags[0] ?? claim.recommendedAction}
 						</p>
 					</div>

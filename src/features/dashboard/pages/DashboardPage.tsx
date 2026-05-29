@@ -55,7 +55,7 @@ export function DashboardPage() {
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100 dark:[background-image:radial-gradient(1200px_600px_at_10%_-10%,rgba(56,189,248,0.12),transparent),radial-gradient(1200px_600px_at_90%_10%,rgba(59,130,246,0.10),transparent)]">
-			<div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
+			<div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
 				<Sidebar />
 
 				<main className="min-w-0">
@@ -81,7 +81,7 @@ export function DashboardPage() {
 						</nav>
 					</div>
 
-					<div className="space-y-8 px-4 py-6 md:px-8">
+					<div className="space-y-8 px-4 py-5 sm:px-5 md:px-8 md:py-6">
 						<DashboardOverview
 							total={summary?.total ?? 0}
 							averageRiskScore={summary?.averageRiskScore ?? 0}

@@ -372,10 +372,10 @@ export function ImportacionCsvPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 md:px-8 dark:bg-slate-950 dark:text-slate-100">
+		<div className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-5 md:px-8 md:py-6 dark:bg-slate-950 dark:text-slate-100">
 			<div className="mx-auto max-w-6xl space-y-6">
 				<Link
-					className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+					className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
 					to="/"
 				>
 					<ArrowLeft aria-hidden size={16} />
@@ -387,7 +387,7 @@ export function ImportacionCsvPage() {
 						<FileSpreadsheet aria-hidden size={15} />
 						Importacion
 					</div>
-					<h1 className="mt-1 text-2xl font-bold tracking-tight">
+					<h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight">
 						Importacion CSV por tabla
 					</h1>
 					<p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
@@ -396,7 +396,7 @@ export function ImportacionCsvPage() {
 					</p>
 				</header>
 
-				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{importConfigs.map((config) => (
 						<ImportCard
 							config={config}
@@ -425,9 +425,9 @@ export function ImportacionCsvPage() {
 								guardarlo en Convex con las mismas validaciones.
 							</p>
 						</div>
-						<div className="flex flex-wrap gap-2">
+						<div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
 							<select
-								className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+								className="h-10 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
 								onChange={(event) =>
 									setJsonImportKey(event.target.value as ImportKey)
 								}
@@ -512,22 +512,22 @@ function ImportCard({
 			: "Elegir CSV";
 
 	return (
-		<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-2 text-sm font-semibold">
+		<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
 					<Icon aria-hidden className="text-slate-500" size={18} />
 					{config.title}
 				</div>
 				{state.fileName ? (
-					<span className="truncate text-xs text-slate-500 dark:text-slate-400">
+					<span className="max-w-full truncate text-xs text-slate-500 sm:max-w-40 dark:text-slate-400">
 						{state.fileName}
 					</span>
 				) : null}
 			</div>
 
-			<div className="mt-4 flex flex-wrap gap-2">
+			<div className="mt-4 grid grid-cols-2 gap-2">
 				<button
-					className="inline-flex h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-900"
+					className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-900"
 					disabled={state.loading}
 					onClick={onTriggerFile}
 					type="button"
@@ -536,7 +536,7 @@ function ImportCard({
 					{buttonLabel}
 				</button>
 				<button
-					className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+					className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
 					onClick={onDownloadTemplate}
 					type="button"
 				>

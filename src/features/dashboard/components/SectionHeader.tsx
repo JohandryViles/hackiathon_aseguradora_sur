@@ -1,4 +1,4 @@
-import { type ComponentType } from "react";
+import type { ComponentType } from "react";
 
 type IconComponent = ComponentType<{ className?: string; size?: number }>;
 

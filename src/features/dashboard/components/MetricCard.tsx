@@ -1,4 +1,4 @@
-import { type ComponentType } from "react";
+import type { ComponentType } from "react";
 
 import { formatNumber } from "@/shared/utils/formatNumber";
 
@@ -13,9 +13,9 @@ type MetricCardProps = {
 
 export function MetricCard({ icon: Icon, label, value, money }: MetricCardProps) {
 	return (
-		<article className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+		<article className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
 			<div className="flex items-center justify-between gap-3">
-				<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+				<p className="min-w-0 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
 					{label}
 				</p>
 				<Icon
@@ -24,7 +24,7 @@ export function MetricCard({ icon: Icon, label, value, money }: MetricCardProps)
 					size={18}
 				/>
 			</div>
-			<p className="mt-3 text-2xl font-bold">
+			<p className="mt-3 break-words text-2xl font-bold leading-tight">
 				{money ? "$" : ""}
 				{formatNumber(value)}
 			</p>

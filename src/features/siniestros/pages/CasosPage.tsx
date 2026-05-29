@@ -294,19 +294,19 @@ export function CasosPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 md:px-8 dark:bg-slate-950 dark:text-slate-100">
+		<div className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-5 md:px-8 md:py-6 dark:bg-slate-950 dark:text-slate-100">
 			<div className="mx-auto max-w-7xl space-y-6">
-				<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
 					<Link
-						className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+						className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
 						to="/"
 					>
 						<ArrowLeft aria-hidden size={16} />
 						Volver al dashboard
 					</Link>
-					<div className="flex flex-wrap gap-2">
+					<div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
 						<button
-							className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+							className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
 							disabled={
 								currentClaims.length === 0 || aiRun.status === "running"
 							}
@@ -324,7 +324,7 @@ export function CasosPage() {
 								: "Analizar visibles con IA"}
 						</button>
 						<button
-							className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+							className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 							disabled={processedClaims.length === 0}
 							onClick={() => exportClaimsCsv(processedClaims)}
 							type="button"
@@ -340,7 +340,7 @@ export function CasosPage() {
 						<ClipboardList aria-hidden size={15} />
 						Bandeja antifraude
 					</div>
-					<h1 className="mt-1 text-2xl font-bold tracking-tight">
+					<h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight">
 						Casos procesados
 					</h1>
 					<p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
@@ -366,7 +366,7 @@ export function CasosPage() {
 
 				<section className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
 					<div className="flex flex-col gap-3 border-b border-slate-200 p-4 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800">
-						<label className="relative min-w-64 flex-1">
+						<label className="relative min-w-0 flex-1">
 							<Search
 								aria-hidden
 								className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -381,7 +381,7 @@ export function CasosPage() {
 							/>
 						</label>
 						<select
-							className="h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+							className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm sm:w-auto dark:border-slate-700 dark:bg-slate-950"
 							onChange={(event) =>
 								setRiskFilter(event.target.value as RiskFilter)
 							}
@@ -438,8 +438,102 @@ export function CasosPage() {
 							</div>
 						</div>
 					) : null}
-					<div className="overflow-x-auto">
-						<table className="min-w-full text-sm">
+					<div className="grid gap-3 p-3 lg:hidden">
+						{currentClaims.map((claim) => {
+							const aiResult = aiResultsByClaim[claim.claimNumber];
+							const aiError = aiErrorsByClaim[claim.claimNumber];
+							const humanReviewed =
+								humanReviewedByClaim[claim.claimNumber] === true;
+							const displayRiskLevel = aiResult
+								? riskLevelFromAnalysis(aiResult.nivel)
+								: claim.riskLevel;
+							const isUrgent = displayRiskLevel === "red";
+							const statusText = reviewStatusText({
+								hasAiResult: Boolean(aiResult),
+								hasAiError: Boolean(aiError),
+								humanReviewed,
+							});
+							const alertText = aiResult
+								? [
+										...aiResult.alertas
+											.slice(0, 2)
+											.map((alert) => alert.regla),
+										...aiResult.patrones_detectados.slice(0, 1),
+									].join(" | ") || aiResult.explicacion
+								: claim.anomalyFlags.length > 0
+									? claim.anomalyFlags.slice(0, 2).join(" | ")
+									: "Sin alertas relevantes";
+
+							return (
+								<button
+									className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/70"
+									key={claim._id}
+									onClick={() => setSelectedClaim(claim as ClaimForAnalysis)}
+									type="button"
+								>
+									<div className="flex items-start justify-between gap-3">
+										<div className="min-w-0">
+											<p className="truncate font-semibold">
+												{claim.claimNumber}
+											</p>
+											<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+												{claim.customerId} - {claim.providerId ?? "Sin proveedor"}
+											</p>
+										</div>
+										<span
+											className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[displayRiskLevel]}`}
+										>
+											{aiResult ? aiResult.nivel : riskLevelText(claim.riskLevel)}
+										</span>
+									</div>
+									<div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+										<div className="rounded-md bg-slate-50 p-2 dark:bg-slate-950">
+											<p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+												Monto
+											</p>
+											<p className="mt-1 font-semibold">
+												${formatNumber(claim.claimAmount)}
+											</p>
+										</div>
+										<div className="rounded-md bg-slate-50 p-2 dark:bg-slate-950">
+											<p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+												IA
+											</p>
+											<p className="mt-1 font-semibold">
+												{aiResult
+													? Math.round(aiResult.score_ia)
+													: (claim.mlScore ?? "-")}
+											</p>
+										</div>
+										<div className="rounded-md bg-slate-50 p-2 dark:bg-slate-950">
+											<p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+												Final
+											</p>
+											<p className="mt-1 font-semibold">
+												{aiResult
+													? aiResult.score_final.toFixed(2)
+													: claim.riskScore}
+											</p>
+										</div>
+									</div>
+									<p className="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400">
+										{isUrgent ? "Atencion prioritaria - " : ""}
+										{statusText}
+									</p>
+									<p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-700 dark:text-slate-300">
+										{aiError ?? alertText}
+									</p>
+								</button>
+							);
+						})}
+						{tableClaims && currentClaims.length === 0 ? (
+							<p className="rounded-md bg-slate-50 px-4 py-8 text-center text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+								No hay resultados para el filtro actual.
+							</p>
+						) : null}
+					</div>
+					<div className="hidden overflow-x-auto lg:block">
+						<table className="min-w-[960px] text-sm">
 							<thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-800 dark:text-slate-300">
 								<tr>
 									<th className="px-4 py-3 font-medium">Claim</th>

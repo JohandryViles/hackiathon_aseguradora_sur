@@ -14,17 +14,20 @@ export function AlertConcentrationCard({
 	lines,
 }: AlertConcentrationCardProps) {
 	return (
-		<div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
-			<div className="flex items-center justify-between gap-3">
-				<div>
+		<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
 					<h2 className="font-semibold">Concentracion de alertas</h2>
 					<p className="text-sm text-slate-600 dark:text-slate-300">
 						Top de proveedores, ciudades y coberturas con casos no verdes.
 					</p>
 				</div>
-				<BarChart3 className="text-slate-400 dark:text-slate-500" size={20} />
+				<BarChart3
+					className="shrink-0 text-slate-400 dark:text-slate-500"
+					size={20}
+				/>
 			</div>
-			<div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+			<div className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
 				<TopList title="Proveedores" items={providers} />
 				<TopList title="Ciudades" items={cities} />
 				<TopList title="Coberturas" items={lines} />

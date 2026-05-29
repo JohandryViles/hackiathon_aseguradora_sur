@@ -16,7 +16,7 @@ export function SummaryMetrics({
 	estimatedSavingsOpportunity,
 }: SummaryMetricsProps) {
 	return (
-		<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+		<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 			<MetricCard icon={ClipboardList} label="Total siniestros" value={total} />
 			<MetricCard icon={Gauge} label="Score promedio" value={averageRiskScore} />
 			<MetricCard

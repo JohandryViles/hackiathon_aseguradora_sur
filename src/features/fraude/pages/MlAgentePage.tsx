@@ -21,10 +21,10 @@ export function MlAgentePage() {
 	const summary = useQuery(api.claims.getSummary, {});
 
 	return (
-		<div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 md:px-8 dark:bg-slate-950 dark:text-slate-100">
+		<div className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-5 md:px-8 md:py-6 dark:bg-slate-950 dark:text-slate-100">
 			<div className="mx-auto max-w-6xl space-y-6">
 				<Link
-					className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+					className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
 					to="/"
 				>
 					<ArrowLeft aria-hidden size={16} />
@@ -36,7 +36,7 @@ export function MlAgentePage() {
 						<Brain aria-hidden size={15} />
 						IA supervisada
 					</div>
-					<h1 className="mt-1 text-2xl font-bold tracking-tight">
+					<h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight">
 						IA supervisada y agente de consultas
 					</h1>
 					<p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
@@ -46,7 +46,7 @@ export function MlAgentePage() {
 				</header>
 
 				<section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-					<div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+					<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
 						<div className="flex items-center gap-2 text-sm font-semibold">
 							<Brain aria-hidden className="text-slate-500" size={18} />
 							Modelo supervisado
@@ -60,7 +60,7 @@ export function MlAgentePage() {
 							<p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
 								Precision del modelo entrenado
 							</p>
-							<p className="mt-2 text-5xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
+							<p className="mt-2 text-4xl font-black leading-none tracking-tight text-emerald-950 sm:text-5xl dark:text-emerald-100">
 								{MODEL_PRECISION}
 							</p>
 							<p className="mt-2 text-sm text-emerald-800 dark:text-emerald-200">
@@ -84,7 +84,7 @@ export function MlAgentePage() {
 						</div>
 					</div>
 
-					<div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+					<div className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
 						<div className="flex items-center gap-2 text-sm font-semibold">
 							<Gauge aria-hidden className="text-slate-500" size={18} />
 							Score hibrido
@@ -100,7 +100,7 @@ export function MlAgentePage() {
 					</div>
 				</section>
 
-				<section className="grid gap-4 lg:grid-cols-3">
+				<section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					<FeatureCard
 						icon={ShieldCheck}
 						title="Reglas explicables"
@@ -123,7 +123,7 @@ export function MlAgentePage() {
 						<ClipboardList aria-hidden className="text-slate-500" size={18} />
 						Consultas soportadas
 					</div>
-					<div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+					<div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
 						<QueryExample text="10 casos de mayor riesgo" />
 						<QueryExample text="por que CLM-00001 fue marcado" />
 						<QueryExample text="proveedores con mas alertas" />

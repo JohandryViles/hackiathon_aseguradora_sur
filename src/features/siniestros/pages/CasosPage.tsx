@@ -8,6 +8,7 @@ import {
 	Download,
 	Loader2,
 	Search,
+	X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -40,6 +41,11 @@ function riskLevelFromAnalysis(nivel?: string): "green" | "yellow" | "red" {
 	return "green";
 }
 
+function normalizeRiskLevel(value?: string): "green" | "yellow" | "red" {
+	if (value === "red" || value === "yellow" || value === "green") return value;
+	return "green";
+}
+
 export function CasosPage() {
 	const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
 	const [search, setSearch] = useState("");
@@ -55,6 +61,9 @@ export function CasosPage() {
 	const [aiErrorsByClaim, setAiErrorsByClaim] = useState<
 		Record<string, string>
 	>({});
+	const [selectedClaim, setSelectedClaim] = useState<ClaimForAnalysis | null>(
+		null,
+	);
 
 	useEffect(() => {
 		setAiResultsByClaim(loadStoredAiAnalysisResults());
@@ -151,6 +160,11 @@ export function CasosPage() {
 					? `${errors} caso${errors === 1 ? "" : "s"} no se pudo analizar.`
 					: undefined,
 		});
+	};
+
+	const onReviewClaim = (claimNumber: string) => {
+		const question = encodeURIComponent(`por que ${claimNumber} fue marcado`);
+		window.location.href = `/?review=${question}#agente`;
 	};
 
 	return (
@@ -328,8 +342,18 @@ export function CasosPage() {
 
 									return (
 										<tr
-											className="border-t border-slate-100 align-top hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+											className="cursor-pointer border-t border-slate-100 align-top hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-slate-800 dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800/60"
 											key={claim._id}
+											onClick={() =>
+												setSelectedClaim(claim as ClaimForAnalysis)
+											}
+											onKeyDown={(event) => {
+												if (event.key === "Enter" || event.key === " ") {
+													event.preventDefault();
+													setSelectedClaim(claim as ClaimForAnalysis);
+												}
+											}}
+											tabIndex={0}
 										>
 											<td className="px-4 py-3 font-medium">
 												{claim.claimNumber}
@@ -401,6 +425,160 @@ export function CasosPage() {
 					</div>
 				</section>
 			</div>
+			{selectedClaim ? (
+				<ClaimDetailModal
+					claim={selectedClaim}
+					aiResult={aiResultsByClaim[selectedClaim.claimNumber]}
+					onClose={() => setSelectedClaim(null)}
+					onReview={() => onReviewClaim(selectedClaim.claimNumber)}
+				/>
+			) : null}
+		</div>
+	);
+}
+
+type ClaimDetailModalProps = {
+	claim: ClaimForAnalysis;
+	aiResult?: AnalysisResult;
+	onClose: () => void;
+	onReview: () => void;
+};
+
+function ClaimDetailModal({
+	claim,
+	aiResult,
+	onClose,
+	onReview,
+}: ClaimDetailModalProps) {
+	const displayRiskLevel = aiResult
+		? riskLevelFromAnalysis(aiResult.nivel)
+		: normalizeRiskLevel(claim.riskLevel);
+	const finalScore = aiResult ? aiResult.score_final.toFixed(2) : claim.riskScore;
+	const mlScore = aiResult ? Math.round(aiResult.score_ia) : (claim.mlScore ?? "-");
+	const ruleScore = aiResult
+		? Math.round(aiResult.score_reglas)
+		: claim.ruleRiskScore;
+	const alerts = aiResult
+		? [
+				...aiResult.alertas.map((alert) => alert.regla),
+				...aiResult.patrones_detectados,
+			]
+		: claim.anomalyFlags;
+
+	return (
+		<div
+			aria-modal="true"
+			className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6"
+			role="dialog"
+		>
+			<div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white text-slate-950 shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+				<div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+							Caso seleccionado
+						</p>
+						<h2 className="mt-1 text-xl font-bold">{claim.claimNumber}</h2>
+						<p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+							{claim.customerId} - {claim.providerId ?? "Sin proveedor"}
+						</p>
+					</div>
+					<button
+						aria-label="Cerrar detalle"
+						className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+						onClick={onClose}
+						type="button"
+					>
+						<X aria-hidden size={17} />
+					</button>
+				</div>
+
+				<div className="grid gap-4 p-5 md:grid-cols-3">
+					<DetailItem label="Monto" value={`$${formatNumber(claim.claimAmount)}`} />
+					<DetailItem label="IA" value={String(mlScore)} />
+					<DetailItem label="Reglas" value={String(ruleScore)} />
+					<DetailItem label="Score final" value={String(finalScore)} />
+					<DetailItem
+						label="Nivel"
+						value={aiResult ? aiResult.nivel : riskLevelText(claim.riskLevel)}
+					/>
+					<DetailItem label="Ciudad" value={claim.locationRegion} />
+				</div>
+
+				<div className="space-y-4 px-5 pb-5">
+					<div>
+						<p className="text-sm font-semibold">Clasificacion</p>
+						<span
+							className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${riskPillStyles[displayRiskLevel]}`}
+						>
+							{aiResult ? aiResult.nivel : riskLevelText(claim.riskLevel)}
+						</span>
+					</div>
+
+					<div>
+						<p className="text-sm font-semibold">Alertas principales</p>
+						<div className="mt-2 flex flex-wrap gap-2">
+							{alerts.length > 0 ? (
+								alerts.slice(0, 6).map((alert) => (
+									<span
+										className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+										key={alert}
+									>
+										{alert}
+									</span>
+								))
+							) : (
+								<p className="text-sm text-slate-600 dark:text-slate-300">
+									Sin alertas relevantes.
+								</p>
+							)}
+						</div>
+					</div>
+
+					<div>
+						<p className="text-sm font-semibold">Accion recomendada</p>
+						<p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+							{aiResult?.recomendacion_revision ?? claim.recommendedAction}
+						</p>
+					</div>
+
+					{aiResult?.explicacion ? (
+						<div>
+							<p className="text-sm font-semibold">Explicacion IA</p>
+							<p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+								{aiResult.explicacion}
+							</p>
+						</div>
+					) : null}
+				</div>
+
+				<div className="flex flex-col-reverse gap-2 border-t border-slate-200 p-5 sm:flex-row sm:justify-end dark:border-slate-800">
+					<button
+						className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+						onClick={onClose}
+						type="button"
+					>
+						Cerrar
+					</button>
+					<button
+						className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+						onClick={onReview}
+						type="button"
+					>
+						Revisar
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function DetailItem({ label, value }: { label: string; value?: string }) {
+	return (
+		<div className="rounded-md bg-slate-50 p-3 dark:bg-slate-950">
+			<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+				{label}
+			</p>
+			<p className="mt-1 text-sm font-semibold">{value || "-"}</p>
 		</div>
 	);
 }

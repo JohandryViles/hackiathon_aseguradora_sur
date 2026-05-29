@@ -1504,6 +1504,15 @@ export const getSummary = query({
     const vehicles = await ctx.db.query('vehicles').collect()
     const providers = await ctx.db.query('providers').collect()
     const documents = await ctx.db.query('claimDocuments').collect()
+    const vehicleIdentifiers = new Set<string>()
+    for (const vehicle of vehicles) vehicleIdentifiers.add(vehicle.vehicleId)
+    for (const policy of policies) {
+      if (policy.vehicleId) vehicleIdentifiers.add(policy.vehicleId)
+    }
+    for (const claim of claims) {
+      if (claim.vehicleId) vehicleIdentifiers.add(claim.vehicleId)
+      else if (claim.licensePlateHash) vehicleIdentifiers.add(claim.licensePlateHash)
+    }
 
     if (claims.length === 0) {
       return {
@@ -1513,7 +1522,14 @@ export const getSummary = query({
         byLevel: { green: 0, yellow: 0, red: 0 },
         bySource: { synthetic: 0, public: 0 },
         modelVersion: DEFAULT_ML_MODEL_VERSION,
-        dataModelCounts: { claims: 0, policies: 0, insureds: 0, vehicles: 0, providers: 0, documents: 0 },
+        dataModelCounts: {
+          claims: 0,
+          policies: policies.length,
+          insureds: insureds.length,
+          vehicles: vehicleIdentifiers.size,
+          providers: providers.length,
+          documents: documents.length,
+        },
         topAnomalies: [] as Array<{ flag: string; count: number }>,
         topProviders: [] as Array<{ label: string; count: number }>,
         topCities: [] as Array<{ label: string; count: number }>,
@@ -1562,7 +1578,7 @@ export const getSummary = query({
         claims: claims.length,
         policies: policies.length,
         insureds: insureds.length,
-        vehicles: vehicles.length,
+        vehicles: vehicleIdentifiers.size,
         providers: providers.length,
         documents: documents.length,
       },

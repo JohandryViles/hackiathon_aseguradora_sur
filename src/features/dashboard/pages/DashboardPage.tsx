@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { useEffect } from "react";
 
 import { AssistantSection } from "@/features/chat-ia/pages/AssistantSection";
 import { useAssistant } from "@/features/chat-ia/hooks/useAssistant";
@@ -45,6 +46,12 @@ export function DashboardPage() {
 			),
 		),
 	];
+
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		const reviewQuestion = params.get("review");
+		if (reviewQuestion) setNlQuestion(reviewQuestion);
+	}, [setNlQuestion]);
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100 dark:[background-image:radial-gradient(1200px_600px_at_10%_-10%,rgba(56,189,248,0.12),transparent),radial-gradient(1200px_600px_at_90%_10%,rgba(59,130,246,0.10),transparent)]">

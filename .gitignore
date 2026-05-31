@@ -21,3 +21,5 @@ __pycache__/
 
 # Pytest/cache
 .pytest_cache/
+.logs\frontend.log
+.logs\frontend.log

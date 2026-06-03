@@ -14,18 +14,25 @@ jobs:
   sonar:
     name: Analyze with SonarQube Cloud
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      SONAR_HOST_URL: https://sonarcloud.io
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Validate Sonar secret
+      - name: Validate Sonar config
         shell: bash
         run: |
           set -euo pipefail
-          [ -n "${{ secrets.SONAR_TOKEN }}" ] || (echo "Missing SONAR_TOKEN secret" && exit 1)
-          echo "SONAR_TOKEN detected."
+          [ -n "${SONAR_TOKEN:-}" ] || (echo "Missing SONAR_TOKEN secret" && exit 1)
+          [ -n "${SONAR_ORGANIZATION:-}" ] || (echo "Missing SONAR_ORGANIZATION secret" && exit 1)
+          [ -n "${SONAR_PROJECT_KEY:-}" ] || (echo "Missing SONAR_PROJECT_KEY secret" && exit 1)
+          echo "Sonar config detected."
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -40,5 +47,9 @@ jobs:
 
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
